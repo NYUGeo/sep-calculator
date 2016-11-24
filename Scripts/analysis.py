@@ -8,7 +8,7 @@ import numpy as np
 #        gamma = unit weight
 #          phi = internal friction angle
 #            c = cohesion
-#            g = gravitational acceleration
+#            g = gravitational acceleration (9.80665 m/s2)
 #           kh = horizontal seismic coefficient
 #           kv = vertical seismic coefficient
 #      K_alpha = active lateral earth pressure coefficient
@@ -23,54 +23,60 @@ import numpy as np
 #    sigma_AEH =
 #      J_alpha = active condition
 
-### Equation 1
-g_theta = np.sqrt((g + alpha_v)**2 + alpha_h**2)
 
-### Equation 2
-# theta = np.arctan(alpha_h / (g + alpha_v))
-# or
-theta = np.arctan(kh/(1 + kv))
+def calculate(kh, kv, ):
+    ### Gravitational & pseudo-static accelerations
+    g = 9.80665
+    alpha_h = kh * g
+    alpha_v = kv * g
+    ### Equation 1
+    g_theta = np.sqrt((g + alpha_v)**2 + alpha_h**2)
 
-### Equation 3
-gamma_theta = (gamma * (1 + kv))/(np.cos(theta))
+    ### Equation 2
+    # theta = np.arctan(alpha_h / (g + alpha_v))
+    # or
+    theta = np.arctan(kh/(1 + kv))
 
-### Equation 4
-sigma_theta = gamma * zeta * (1 + kv) * (np.cos(beta)/np.cos(theta))
+    ### Equation 3
+    gamma_theta = (gamma * (1 + kv))/(np.cos(theta))
 
-### Equation 13
-J_alpha = (1/np.cos(phi)**2) * (
-            (
-             ((gamma*zeta*np.cos(beta)*np.cos(beta+theta)(1+kv))/np.cos(theta))
-             + c * np.cos(phi) * np.sin(phi)
-            )
-            - np.sqrt(
-             (gamma**2 * zeta**2 * np.cos(beta)**2 * (1+kv)**2 *
-                ((np.cos(beta+theta)**2 - np.cos(phi)**2)/np.cos(theta)**2))
-             + c**2 + np.cos(phi)**2
-             + ((2*c*gamma*zeta*np.cos(phi)*np.sin(phi)*np.cos(beta)*np.cos(beta+theta)*(1+kv))/np.cos(theta))
-            )
-)
+    ### Equation 4
+    sigma_theta = gamma * zeta * (1 + kv) * (np.cos(beta)/np.cos(theta))
 
-### Equation 16
-K_alpha =   (
-            (np.cos(beta)*(1+kv)*(np.sin(theta+omega)**2 - np.cos(beta-omega)**2))/(np.cos(alpha)*np.cos(beta+theta)*np.cos(theta))
-            ) + (
-            ((2*(J_alpha/(gamma*zeta))*np.cos(beta-omega)**2)/np.cos(alpha))
-)
+    ### Equation 13
+    J_alpha = (1/np.cos(phi)**2) * (
+                (
+                 ((gamma*zeta*np.cos(beta)*np.cos(beta+theta)(1+kv))/np.cos(theta))
+                 + c * np.cos(phi) * np.sin(phi)
+                )
+                - np.sqrt(
+                 (gamma**2 * zeta**2 * np.cos(beta)**2 * (1+kv)**2 *
+                    ((np.cos(beta+theta)**2 - np.cos(phi)**2)/np.cos(theta)**2))
+                 + c**2 + np.cos(phi)**2
+                 + ((2*c*gamma*zeta*np.cos(phi)*np.sin(phi)*np.cos(beta)*np.cos(beta+theta)*(1+kv))/np.cos(theta))
+                )
+    )
 
-### Equation 15
-sigma_alpha = gamma * zeta * K_alpha
+    ### Equation 16
+    K_alpha =   (
+                (np.cos(beta)*(1+kv)*(np.sin(theta+omega)**2 - np.cos(beta-omega)**2))/(np.cos(alpha)*np.cos(beta+theta)*np.cos(theta))
+                ) + (
+                ((2*(J_alpha/(gamma*zeta))*np.cos(beta-omega)**2)/np.cos(alpha))
+    )
 
-### Equation 18
-alpha_alpha = np.arctan(
-            (
-             ((2*np.cos(theta)*np.cos(beta+theta)*J_alpha)/(np.cos(beta)*(1+kv)*gamma*zeta)-1)
-             * np.sin(beta-omega)**2 + np.sin(theta+omega)**2
-            )/2*(
-             ((2*np.cos(theta)*np.cos(beta+theta)*J_alpha)/(np.cos(beta)*(1+kv)*gamma*zeta)-1)
-             * np.cos(beta-omega)**2 + np.sin(theta+omega)**2
-            )
-)
+    ### Equation 15
+    sigma_alpha = gamma * zeta * K_alpha
 
-### Equation 19
-sigma_AEH = sigma_alpha * np.cos(alpha_alpha + omega)
+    ### Equation 18
+    alpha_alpha = np.arctan(
+                (
+                 ((2*np.cos(theta)*np.cos(beta+theta)*J_alpha)/(np.cos(beta)*(1+kv)*gamma*zeta)-1)
+                 * np.sin(beta-omega)**2 + np.sin(theta+omega)**2
+                )/2*(
+                 ((2*np.cos(theta)*np.cos(beta+theta)*J_alpha)/(np.cos(beta)*(1+kv)*gamma*zeta)-1)
+                 * np.cos(beta-omega)**2 + np.sin(theta+omega)**2
+                )
+    )
+
+    ### Equation 19
+    sigma_AEH = sigma_alpha * np.cos(alpha_alpha + omega)
