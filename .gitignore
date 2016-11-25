@@ -1,0 +1,6 @@
+*.pyc
+workspace.xml
+*checkpoint.ipynb
+.DS_Store
+venv/
+.idea/
