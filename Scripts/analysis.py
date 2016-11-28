@@ -223,11 +223,13 @@ class sep2 (object):
         """
         if z:
             z = z
+            Ja = self.Ja(z)
         else:
             z = self.z()
+            Ja = self.Ja()
 
         alpha_a_p1 = (((2*np.cos(self.theta())*np.cos(self.beta+self.theta())) \
-                        / (np.cos(self.beta)*(1+self.kv)))*(self.Ja() \
+                        / (np.cos(self.beta)*(1+self.kv)))*(Ja \
                         / (self.gamma*z))-1)
         alpha_a_p2 = 2*(np.sin(self.beta-self.omega))*(np.cos(self.beta-self.omega))
         alpha_a_p3 = 2*(np.sin(self.theta()+self.omega))*(np.cos(self.theta()+self.omega))
@@ -247,15 +249,17 @@ class sep2 (object):
         """
         if z:
             z = z
+            Ja = self.Ja(z)
         else:
             z = self.z()
+            Ja = self.Ja()
 
         return ((np.cos(self.beta)*(1+self.kv)*(np.sin(self.theta()+self.omega)**2 \
                 - np.cos(self.beta-self.omega)**2)) \
                /(np.cos(self.alpha_a())*np.cos(self.beta+self.theta()) \
                * np.cos(self.theta()))
                ) + (
-               ((2*(self.Ja()/(self.gamma*z))*np.cos(self.beta-self.omega)**2) \
+               ((2*(Ja/(self.gamma*z))*np.cos(self.beta-self.omega)**2) \
                / np.cos(self.alpha_a())))
 
     def sigma_a(self, z=None):
@@ -264,16 +268,25 @@ class sep2 (object):
         """
         if z:
             z = z
+            Ka = self.Ka(z)
         else:
             z = self.z()
+            Ka = self.Ka()
 
-        return self.gamma * z * self.Ka()
+        return self.gamma * z * Ka
 
-    def sigma_AEH(self):
+    def sigma_AEH(self, z=None):
         """
         Equation 19:
         """
-        return self.sigma_a() * np.cos(self.alpha_a() + self.omega)
+        if z:
+            sigma_a = self.sigma_a(z)
+            alpha_a = self.alpha_a(z)
+        else:
+            sigma_a = self.sigma_a()
+            alpha_a = self.alpha_a()
+
+        return sigma_a * np.cos(alpha_a + self.omega)
 
     def Hz(self):
         """
@@ -293,12 +306,17 @@ class sep2 (object):
         """
         Equation 20: Depth of tension crack
         """
-        #var1 = self.Hl()
-        #var2 = self.Ja(z=var1)
+        var1 = self.Hz()
+        var2 = self.sigma_AEH(var1)
+        var3 = self.sigma_AEH(0.1*var1)
 
-        #return self.Hl() * (1 - ()/())
+        return var1*(1-(0.9*var2)/(var2-var3))
 
-
+    def Hzc(self):
+        """
+        add...
+        """
+        return self.zc()*(np.cos(self.beta)/np.cos(self.beta-self.omega))
 
 ### Test with:
 ### test = sep(0.2, -0.1, 20, 15, 30, 23, 20, 15, 6)
