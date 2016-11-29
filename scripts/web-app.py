@@ -5,7 +5,7 @@ from bokeh import models
 from bokeh.plotting import figure
 from bokeh.io import output_file, show, curdoc
 from bokeh.charts import HeatMap, bins, output_file, show
-from bokeh.models import ColumnDataSource, Slider
+from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
 from bokeh.layouts import widgetbox, row, column
@@ -60,28 +60,55 @@ x_sigma.extend([0,0])
 y_sigma.extend([example.Hl(),0])
 source_example = ColumnDataSource(data=dict(x=x_sigma, y=y_sigma))
 
+### Arrow data
+source_arrow1 = ColumnDataSource(data={
+        'x0': [example.sigma_AEH(example.H)],
+        'y0': [example.Hl()-example.Hp1()],
+        'y1': [example.Hl()-example.Hp1()]
+})
+
+### Stress plot
 TOOLS = 'pan,box_zoom,crosshair,reset,save'
 plot_sigma = figure(x_axis_label='sigma_AEH (kPa)', y_axis_label= \
                     "Depth Along Wall Length 'Zl' (m)", y_range=(0.99*example.Hl(),example.Hl()-30), \
                     plot_width=250, plot_height=450, \
-                    toolbar_location="above", toolbar_sticky=False, tools=TOOLS)
+                    toolbar_location="above", toolbar_sticky=False, tools=TOOLS, \
+                    title="Horizontal Pseudo-Static Lateral Earth Pressure", \
+                    title_location="right")
 sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
 plot_sigma.add_glyph(source_example, sigma_plot)
-
+arrow1 = Arrow(end=OpenHead(line_color="black", line_width=3, line_join='bevel'), line_width=3, \
+                   x_start='x0', y_start='y0', \
+                   x_end=0, y_end='y1',source=source_arrow1)
+plot_sigma.add_layout(arrow1)
+load1 = Label(x=0.5*example.sigma_AEH(example.H), y=example.Hl()-example.Hp1(), \
+              text="{:.0f} kN".format(example.P_AEH1()),text_font_style='bold',\
+              border_line_width=2,text_font_size='16pt',text_color='red')
+plot_sigma.add_layout(load1)
+h_load1 = Label(x=0.5*example.sigma_AEH(example.H), y=example.Hl()-example.Hp1(), \
+              text="@ {:.2f} m".format(example.Hp1()),text_font_style='bold',\
+              border_line_width=2,text_font_size='12pt',text_color='red', y_offset=-20)
+plot_sigma.add_layout(h_load1)
+plot_sigma.min_border_left = 50
 
 ### Define Data Sources
 source_wall = ColumnDataSource(data=dict(x=x_wall,y=y_wall))
 source_earth = ColumnDataSource(data=dict(x=x_earth,y=y_earth))
 
+
 # Add patches to figure
 plot = figure(x_axis_label='x-axis', y_axis_label='Height (m)',  \
                 plot_width=350, plot_height=450, y_range=(0,30), \
-                toolbar_location="above", toolbar_sticky=False, tools=TOOLS)
+                toolbar_location="above", toolbar_sticky=False, tools=TOOLS, \
+                title="Retaining Wall and Backfill Properties", \
+                title_location="above")
 plot.xaxis.visible = False
 wall = Patch(x='x', y='y', fill_color = '#DCDDDE', line_color = 'black')
 plot.add_glyph(source_wall, wall)
 earth = Patch(x='x', y='y', fill_color = '#FFFF99', line_color = 'black')
 plot.add_glyph(source_earth, earth)
+plot.min_border_left = 50
+
 
 ### Tabulating data
 zwi=[0.0001,(example.H/5),2*(example.H/5),3*(example.H/5),4*(example.H/5),(example.H)]
@@ -177,9 +204,21 @@ def update_plot(attr, old, new):
             s_AEH=[new_example.sigma_AEH(i) for i in new_zwi]
     )
 
+    ### Update arrow data
+    source_arrow1.data = {
+            'x0': [new_example.sigma_AEH(new_example.H)],
+            'y0': [new_example.Hl()-new_example.Hp1()],
+            'y1': [new_example.Hl()-new_example.Hp1()]
+    }
+    load1.text="{:.0f} kN".format(new_example.P_AEH1())
+    load1.x=0.5*new_example.sigma_AEH(new_example.H)
+    load1.y=new_example.Hl()-new_example.Hp1()
+    h_load1.text="@ {:.2f} m".format(new_example.Hp1())
+    h_load1.x=0.5*new_example.sigma_AEH(new_example.H)
+    h_load1.y=new_example.Hl()-new_example.Hp1()
 
 ### Sliders
-H_value = Slider(start=10,end=25,step=1,value=15,title='Retaining Wall Height (m)')
+H_value = Slider(start=10,end=25,step=0.5,value=15,title='Retaining Wall Height (m)')
 omega_slider = Slider(start=0,end=25,step=1,value=20,title='Omega Angle (degrees)')
 beta_slider = Slider(start=0,end=20,step=1,value=15,title='Beta Angle (degrees)')
 phi_slider = Slider(start=0,end=45,step=1,value=30,title='Phi Angle (degrees)')
