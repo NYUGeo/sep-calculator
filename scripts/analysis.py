@@ -74,7 +74,7 @@ class sep (object):
                 * np.cos(self.beta) * np.cos(self.beta+self.theta())*(1+self.kv)) \
                 / (np.cos(self.theta()))
 
-        return (1/((np.cos(self.phi))**2))*(J_p1 - np.sqrt(J_p2+J_p3+J_p4))
+        return (1/((np.cos(self.phi))**2))*(J_p1 - np.sqrt(np.absolute(J_p2+J_p3+J_p4)))
 
     def alpha_a(self, zw, degrees=False):
         """
