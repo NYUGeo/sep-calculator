@@ -1,6 +1,7 @@
 import numpy as np
 from analysis import sep
 
+from bokeh.client import push_session
 from bokeh import models
 from bokeh.plotting import figure
 from bokeh.io import output_file, show, curdoc
@@ -9,6 +10,8 @@ from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
 from bokeh.layouts import widgetbox, row, column
+
+session = push_session(curdoc())
 
 ### Default input values
 kh = 0.2
@@ -243,7 +246,12 @@ layout = column(row(widgetbox(H_value,omega_slider,beta_slider,phi_slider, \
                 plot, plot_sigma),data_table)
 
 curdoc().add_root(layout)
+curdoc().title = "SEP Calculator"
+#curdoc().add_periodic_callback(cb, 100)
 
+session.show(layout) # open the document in a browser
+
+session.loop_until_closed() # run forever
 
 # run with:
 # bokeh serve --show web-app.py
