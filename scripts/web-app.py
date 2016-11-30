@@ -11,7 +11,7 @@ from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
 from bokeh.layouts import widgetbox, row, column
 
-session = push_session(curdoc())
+#session = push_session(curdoc(),url='http://216.165.116.94:5006')
 
 ### Default input values
 kh = 0.2
@@ -249,12 +249,15 @@ curdoc().add_root(layout)
 curdoc().title = "SEP Calculator"
 #curdoc().add_periodic_callback(cb, 100)
 
-session.show(layout) # open the document in a browser
+#session.show(layout) # open the document in a browser
+#session.loop_until_closed() # run forever
 
-session.loop_until_closed() # run forever
+### test with:
+### bokeh serve --show web-app.py
 
-# run with:
-# bokeh serve --show web-app.py
+### run forever on server with:
+### nohup bokeh serve web-app.py --allow-websocket-origin cue3.engineering.nyu.edu:5006 --host cue3.engineering.nyu.edu:5006
+
 
 # Specify the name of the output file and show the result
 #output_file('web-plot.html')
