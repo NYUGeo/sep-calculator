@@ -73,7 +73,7 @@ source_arrow1 = ColumnDataSource(data={
 ### Stress plot
 TOOLS = 'pan,box_zoom,crosshair,reset,save'
 plot_sigma = figure(x_axis_label='sigma_AEH (kPa)', y_axis_label= \
-                    "Depth Along Wall Length 'Zl' (m)", y_range=(0.99*example.Hl(),example.Hl()-30), \
+                    "Depth Along Wall Length 'Zl $z_l$' (m)", y_range=(0.99*example.Hl(),example.Hl()-30), \
                     plot_width=250, plot_height=450, \
                     toolbar_location="above", toolbar_sticky=False, tools=TOOLS, \
                     title="Horizontal Pseudo-Static Lateral Earth Pressure", \
@@ -150,6 +150,7 @@ def update_plot(attr, old, new):
     kh = kh_slider.value
     kv = kv_slider.value
 
+
     ### New Retaining Wall Coordinates
     new_xA = 0
     new_yA = 0
@@ -179,46 +180,54 @@ def update_plot(attr, old, new):
 
     ### New example values
     new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
-    new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
-    new_sigma_x = new_example.sigma_AEH(new_sigma_y)
-    new_x_sigma = new_sigma_x.tolist()
-    new_y_sigma = new_sigma_y.tolist()
-    new_x_sigma.extend([0,0])
-    new_y_sigma.extend([new_example.Hl(),0])
 
-    ### Update the data
-    source_wall.data = dict(x=new_x_wall, y=new_y_wall)
-    source_earth.data = dict(x=new_x_earth, y=new_y_earth)
-    source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
-    plot_sigma.y_range.start=0.99*new_example.Hl()
-    plot_sigma.y_range.end=(new_example.Hl()-30)
+    ### IF clause for beta + theta < phi
+    if beta + new_example.theta() > phi:
+        error = Label(x=5, y=5, \
+                      text="Error!",text_font_style='bold',\
+                      border_line_width=2,text_font_size='12pt',text_color='red')
+        plot_sigma.add_layout(error)
+    else:
+        new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
+        new_sigma_x = new_example.sigma_AEH(new_sigma_y)
+        new_x_sigma = new_sigma_x.tolist()
+        new_y_sigma = new_sigma_y.tolist()
+        new_x_sigma.extend([0,0])
+        new_y_sigma.extend([new_example.Hl(),0])
 
-    ### Update tabulated data
-    new_zwi=[0.0001,(new_example.H/5),2*(new_example.H/5),3*(new_example.H/5), \
-             4*(new_example.H/5),(new_example.H)]
-    source_table.data = dict(
-            zw=new_zwi,
-            zl=[new_example.zl(i) for i in new_zwi],
-            z=[new_example.z(i) for i in new_zwi],
-            Ja=[new_example.Ja(i) for i in new_zwi],
-            a_a=[new_example.alpha_a(i, degrees=True) for i in new_zwi],
-            Ka=[new_example.Ka(i) for i in new_zwi],
-            s_a=[new_example.sigma_a(i) for i in new_zwi],
-            s_AEH=[new_example.sigma_AEH(i) for i in new_zwi]
-    )
+        ### Update the data
+        source_wall.data = dict(x=new_x_wall, y=new_y_wall)
+        source_earth.data = dict(x=new_x_earth, y=new_y_earth)
+        source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
+        plot_sigma.y_range.start=0.99*new_example.Hl()
+        plot_sigma.y_range.end=(new_example.Hl()-30)
 
-    ### Update arrow data
-    source_arrow1.data = {
-            'x0': [new_example.sigma_AEH(new_example.H)],
-            'y0': [new_example.Hl()-new_example.Hp1()],
-            'y1': [new_example.Hl()-new_example.Hp1()]
-    }
-    load1.text="{:.0f} kN".format(new_example.P_AEH1())
-    load1.x=0.5*new_example.sigma_AEH(new_example.H)
-    load1.y=new_example.Hl()-new_example.Hp1()
-    h_load1.text="@ {:.2f} m".format(new_example.Hp1())
-    h_load1.x=0.5*new_example.sigma_AEH(new_example.H)
-    h_load1.y=new_example.Hl()-new_example.Hp1()
+        ### Update tabulated data
+        new_zwi=[0.0001,(new_example.H/5),2*(new_example.H/5),3*(new_example.H/5), \
+                 4*(new_example.H/5),(new_example.H)]
+        source_table.data = dict(
+                zw=new_zwi,
+                zl=[new_example.zl(i) for i in new_zwi],
+                z=[new_example.z(i) for i in new_zwi],
+                Ja=[new_example.Ja(i) for i in new_zwi],
+                a_a=[new_example.alpha_a(i, degrees=True) for i in new_zwi],
+                Ka=[new_example.Ka(i) for i in new_zwi],
+                s_a=[new_example.sigma_a(i) for i in new_zwi],
+                s_AEH=[new_example.sigma_AEH(i) for i in new_zwi]
+        )
+
+        ### Update arrow data
+        source_arrow1.data = {
+                'x0': [new_example.sigma_AEH(new_example.H)],
+                'y0': [new_example.Hl()-new_example.Hp1()],
+                'y1': [new_example.Hl()-new_example.Hp1()]
+        }
+        load1.text="{:.0f} kN".format(new_example.P_AEH1())
+        load1.x=0.5*new_example.sigma_AEH(new_example.H)
+        load1.y=new_example.Hl()-new_example.Hp1()
+        h_load1.text="@ {:.2f} m".format(new_example.Hp1())
+        h_load1.x=0.5*new_example.sigma_AEH(new_example.H)
+        h_load1.y=new_example.Hl()-new_example.Hp1()
 
 ### Sliders
 H_value = Slider(start=10,end=25,step=0.5,value=15,title='Retaining Wall Height (m)')
@@ -253,10 +262,10 @@ curdoc().title = "SEP Calculator"
 #session.loop_until_closed() # run forever
 
 ### test with:
-### bokeh serve --show web-app.py
+### bokeh serve --show sep-calculator.py
 
 ### run forever on server with:
-### nohup bokeh serve web-app.py --allow-websocket-origin cue3.engineering.nyu.edu:5006 --host cue3.engineering.nyu.edu:5006
+### nohup bokeh serve sep-calculator.py --allow-websocket-origin cue3.engineering.nyu.edu:5006 --host cue3.engineering.nyu.edu:5006
 
 
 # Specify the name of the output file and show the result
