@@ -1,3 +1,5 @@
+from os.path import dirname, join
+
 import numpy as np
 from analysis import sep
 
@@ -6,10 +8,10 @@ from bokeh import models
 from bokeh.plotting import figure
 from bokeh.io import output_file, show, curdoc
 from bokeh.charts import HeatMap, bins, output_file, show
-from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label
+from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label, Div
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
-from bokeh.layouts import widgetbox, row, column
+from bokeh.layouts import widgetbox, row, column, layout
 
 #session = push_session(curdoc(),url='http://216.165.116.94:5006')
 
@@ -74,7 +76,7 @@ source_arrow1 = ColumnDataSource(data={
 TOOLS = 'pan,box_zoom,crosshair,reset,save'
 plot_sigma = figure(x_axis_label='sigma_AEH (kPa)', y_axis_label= \
                     "Depth Along Wall Length 'Zl $z_l$' (m)", y_range=(0.99*example.Hl(),example.Hl()-30), \
-                    plot_width=250, plot_height=450, \
+                    plot_width=275, plot_height=450, \
                     toolbar_location="above", toolbar_sticky=False, tools=TOOLS, \
                     title="Horizontal Pseudo-Static Lateral Earth Pressure", \
                     title_location="right")
@@ -137,7 +139,7 @@ columns = [
         TableColumn(field='s_AEH',title='S_AEH (kPa)',formatter=models.NumberFormatter(format='0.000'))
 ]
 
-data_table = DataTable(source=source_table, columns=columns, width=850)
+data_table = DataTable(source=source_table, columns=columns, width=850, height=200)
 
 # Callback function that updates the plot
 def update_plot(attr, old, new):
@@ -232,12 +234,12 @@ def update_plot(attr, old, new):
 ### Sliders
 H_value = Slider(start=10,end=25,step=0.5,value=15,title='Retaining Wall Height (m)')
 omega_slider = Slider(start=0,end=25,step=1,value=20,title='Omega Angle (degrees)')
-beta_slider = Slider(start=0,end=20,step=1,value=15,title='Beta Angle (degrees)')
+beta_slider = Slider(start=-20,end=20,step=1,value=15,title='Beta Angle (degrees)')
 phi_slider = Slider(start=0,end=45,step=1,value=30,title='Phi Angle (degrees)')
 c_slider = Slider(start=0,end=100,step=5,value=20,title='Cohesion (kPa)')
-gamma_slider = Slider(start=20,end=30,step=1,value=23,title='Unit Weight (kN/m3)')
-kh_slider = Slider(start=-0.3,end=0.3,step=0.1,value=0.2,title='Horizontal Seismic Coefficient')
-kv_slider = Slider(start=-0.3,end=0.3,step=0.1,value=-0.1,title='Vertical Seismic Coefficient')
+gamma_slider = Slider(start=16,end=22,step=1,value=20,title='Unit Weight (kN/m3)')
+kh_slider = Slider(start=0,end=0.4,step=0.1,value=0.2,title='Horizontal Seismic Coefficient')
+kv_slider = Slider(start=-0.4,end=0.4,step=0.1,value=-0.1,title='Vertical Seismic Coefficient')
 
 # Attach the callback to the 'value' property of slider
 H_value.on_change('value', update_plot)
@@ -249,12 +251,23 @@ gamma_slider.on_change('value', update_plot)
 kh_slider.on_change('value', update_plot)
 kv_slider.on_change('value', update_plot)
 
-# Make a row layout of widgetbox(slider) and plot and add it to the current document
-layout = column(row(widgetbox(H_value,omega_slider,beta_slider,phi_slider, \
-                c_slider,gamma_slider,kh_slider,kv_slider),\
-                plot, plot_sigma),data_table)
 
-curdoc().add_root(layout)
+page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(), width=940)
+page_footer = Div(text=open(join(dirname(__file__), "page_footer.html")).read(), width=940)
+controls = [H_value,omega_slider,beta_slider,phi_slider,c_slider,gamma_slider,kh_slider,kv_slider]
+inputs = widgetbox(*controls, width=225)
+
+
+# The layout function replaces the row and column functions
+page_layout = layout([
+                [page_header],
+                [inputs,plot,plot_sigma],
+                [data_table],
+                [page_footer]
+])
+
+
+curdoc().add_root(page_layout)
 curdoc().title = "SEP Calculator"
 #curdoc().add_periodic_callback(cb, 100)
 
