@@ -10,7 +10,7 @@ from bokeh.io import output_file, show, curdoc
 from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label, Div
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
-from bokeh.layouts import widgetbox, row, column, layout
+from bokeh.layouts import widgetbox, row, column, layout, Spacer
 
 
 # Default input values
@@ -84,7 +84,7 @@ plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
                     x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)", # sigma_AEH
                     y_axis_label="Depth Along Wall Length 'Zl' (m)",
                     y_range=(0.99*example.Hl(),example.Hl()-30),
-                    plot_width=250,
+                    plot_width=200,
                     plot_height=400,
                     #toolbar_location="above",
                     toolbar_location=None,
@@ -105,7 +105,7 @@ arrow1 = Arrow(end=OpenHead(line_color="black",
                source=source_arrow1)
 plot_sigma.add_layout(arrow1)
 
-load1 = Label(x=0.5*example.sigma_AEH(example.H),
+load1 = Label(x=0.3*example.sigma_AEH(example.H),
               y=example.Hl()-example.Hp1(),
               text="{:.0f} kN".format(example.P_AEH1()),
               text_font_style='bold',
@@ -114,7 +114,7 @@ load1 = Label(x=0.5*example.sigma_AEH(example.H),
               text_color='red')
 plot_sigma.add_layout(load1)
 
-h_load1 = Label(x=0.5*example.sigma_AEH(example.H),
+h_load1 = Label(x=0.3*example.sigma_AEH(example.H),
                 y=example.Hl()-example.Hp1(),
                 text="@ {:.2f} m".format(example.Hp1()),
                 text_font_style='bold',
@@ -125,6 +125,19 @@ h_load1 = Label(x=0.5*example.sigma_AEH(example.H),
 plot_sigma.add_layout(h_load1)
 plot_sigma.min_border_left = 50
 
+error = Label(x=115,
+              y=300,
+              x_units='screen',
+              y_units='screen',
+              render_mode='css',
+              text="Inadmissible\nCondition!",
+              text_font_style='bold',
+              text_align='center',
+              border_line_width=2,
+              text_font_size='12pt',
+              text_color='red')
+plot_sigma.add_layout(error)
+error.visible = False
 
 
 ##############################################################################
@@ -196,6 +209,8 @@ mohr_plot = figure(x_axis_label="\u03C3' (kPa???)",
                    toolbar_location=None,
                    x_range=(0, 2.0 * example.Ja(H)),
                    y_range=(0, 2.03 * example.Ja(H)),
+                   #background_fill_color='red',
+                   background_fill_alpha=0.1
                    #match_aspect=True,
                    #aspect_scale = 1.0
                    )
@@ -212,7 +227,7 @@ fail_line = mohr_plot.line(
                 y='y_fail',
                 source=mohr_line_data,
                 line_width=2,
-                legend='Effective stress failure envelope')
+                legend='Effective stress M-C failure envelope')
 
 conj_line = mohr_plot.line(
                 x='x_conj',
@@ -220,7 +235,7 @@ conj_line = mohr_plot.line(
                 source=mohr_line_data,
                 line_width=3,
                 color='orange',
-                legend='Conjugate stress failure envelope')
+                legend='Conjugate stress line')
 
 mohr_plot.circle(x='center',
                  y='y',
@@ -231,6 +246,18 @@ mohr_plot.circle(x='center',
                  #radius_dimension='y',
                  source=mohr_circle_data)
 
+mohr_depth = Label(x=100,
+              y=250,
+              x_units='screen',
+              y_units='screen',
+              text="Depth (Zw): {:.1f} m".format(H),
+              text_font_style='bold',
+              text_align='left',
+              text_font_size='11pt',
+              text_color='black')
+mohr_plot.add_layout(mohr_depth)
+
+print(mohr_circle_data.data['radius'])
 
 
 ##############################################################################
@@ -290,7 +317,7 @@ data_table = DataTable(source=source_table,
 ##############################################################################
 
 
-# Callback function that updates the plot
+# Callback function that updates all plots
 def update_plot(attr, old, new):
     omega = omega_slider.value
     beta = beta_slider.value
@@ -301,6 +328,8 @@ def update_plot(attr, old, new):
     kh = kh_slider.value
     kv = kv_slider.value
 
+    zw_slider.end = H
+    zw_slider.value = H
 
     ### New Retaining Wall Coordinates
     new_xA = 0
@@ -336,35 +365,24 @@ def update_plot(attr, old, new):
     mohr_plot.y_range.end = 2.03 * new_example.Ja(H)
 
 
-    # error = Label(x=100,
-    #               y=200,
-    #               x_units='screen',
-    #               y_units='screen',
-    #               text="Inadmissible Condition!",
-    #               text_font_style='bold',
-    #               text_align='center',
-    #               border_line_width=2,
-    #               text_font_size='12pt',
-    #               text_color='red',
-    #               text_alpha=0)
-    # plot_sigma.add_layout(error)
-    #
-    #
     ### IF clause for beta + theta < phi
     if beta + np.degrees(new_example.theta()) > phi:
-        #conj_line.visible = False
-        sigma_plot.fill_alpha = 0
-        sigma_plot.line_alpha = 0
-        arrow1.visible = False
-        load1.visible = False
-        h_load1.visible = False
+        # sigma_plot.fill_alpha = 0
+        # sigma_plot.line_alpha = 0
+        # arrow1.visible = False
+        # load1.visible = False
+        # h_load1.visible = False
+        error.visible = True
+        mohr_plot.background_fill_color = 'red'
 
     else:
-        sigma_plot.fill_alpha = 1
-        sigma_plot.line_alpha = 1
-        arrow1.visible = True
-        load1.visible = True
-        h_load1.visible = True
+        # sigma_plot.fill_alpha = 1
+        # sigma_plot.line_alpha = 1
+        # arrow1.visible = True
+        # load1.visible = True
+        # h_load1.visible = True
+        error.visible = False
+        mohr_plot.background_fill_color = None
 
 
 
@@ -399,7 +417,7 @@ def update_plot(attr, old, new):
                    + new_example.Ja(H)) * np.sin(np.radians(phi))],
         )
 
-
+    mohr_depth.text="Depth (Zw): {:.1f} m".format(H)
 
 
 
@@ -424,11 +442,48 @@ def update_plot(attr, old, new):
             'y1': [new_example.Hl()-new_example.Hp1()]
     }
     load1.text="{:.0f} kN".format(new_example.P_AEH1())
-    load1.x=0.5*new_example.sigma_AEH(new_example.H)
+    load1.x=0.3*new_example.sigma_AEH(new_example.H)
     load1.y=new_example.Hl()-new_example.Hp1()
     h_load1.text="@ {:.2f} m".format(new_example.Hp1())
-    h_load1.x=0.5*new_example.sigma_AEH(new_example.H)
+    h_load1.x=0.3*new_example.sigma_AEH(new_example.H)
     h_load1.y=new_example.Hl()-new_example.Hp1()
+
+
+
+# Callback function that updates mohr circle for zw
+def update_mohr_zw(attr, old, new):
+    omega = omega_slider.value
+    beta = beta_slider.value
+    phi = phi_slider.value
+    H = H_value.value
+    c = c_slider.value
+    gamma = gamma_slider.value
+    kh = kh_slider.value
+    kv = kv_slider.value
+
+    zwd = zw_slider.value
+
+    new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
+
+    # Update Mohr circle
+    mohr_line_data.data = dict(
+        x_fail = [0, 1.5*new_example.Ja(zwd)],
+        y_fail = [c, c + (np.tan(np.radians(phi))*1.5*new_example.Ja(zwd))],
+        x_conj = [0, 1.7*new_example.Ja(zwd)],
+        y_conj = [0, (np.tan(np.radians(beta) + new_example.theta())
+                     ) * 1.7 * new_example.Ja(zwd)],
+        )
+
+    mohr_circle_data.data = dict(
+        y = [0],
+        center = [new_example.Ja(zwd)],
+        # Circle radius from equation 11
+        radius = [(c * (1/np.tan(np.radians(phi)))
+                   + new_example.Ja(zwd)) * np.sin(np.radians(phi))],
+        )
+
+    mohr_depth.text="Depth (Zw): {:.1f} m".format(zwd)
+
 
 
 # Sliders
@@ -464,9 +519,9 @@ c_slider = Slider(
                 title='Cohesion, c, (kPa)')
 gamma_slider = Slider(
                 start=16,
-                end=22,
+                end=25,
                 step=1,
-                value=20,
+                value=23,
                 title='Unit weight, \u03B3, (kN/m\u00B3)')
 kh_slider = Slider(
                 start=0,
@@ -480,14 +535,17 @@ kv_slider = Slider(
                 step=0.1,
                 value=-0.1,
                 title='Vertical Seismic Coefficient, kv')
-v_slider = Slider(
-                start=-0.4,
-                end=0.4,
+zw_slider = Slider(
+                start=0,
+                end=H,
                 step=0.1,
-                value=-0.1,
-                title='Vertical Slider',
+                value=H,
+                #title='Zw',
                 orientation="vertical",
-                height=300)
+                direction='ltr',
+                show_value=False,
+                height=340,
+                width=25)
 
 
 # Attach the callback to the 'value' property of slider
@@ -499,6 +557,7 @@ c_slider.on_change('value', update_plot)
 gamma_slider.on_change('value', update_plot)
 kh_slider.on_change('value', update_plot)
 kv_slider.on_change('value', update_plot)
+zw_slider.on_change('value', update_mohr_zw)
 
 
 page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(), width=1050)
@@ -510,29 +569,30 @@ seismic_controls = [kh_slider,kv_slider]
 seismic_inputs = widgetbox(*seismic_controls, width=260)
 
 soil_controls = [phi_slider,c_slider,gamma_slider]
-soil_inputs = widgetbox(*soil_controls, width=250)
+soil_inputs = widgetbox(*soil_controls, width=260)
 
 # The layout function replaces the row and column functions
 page_layout = layout([
                 [page_header],
                 [Div(text="<h3>Wall Properties:</h3>", width=260),
-                 Div(text="<h3>Soil Properties:</h3>", width=250)],
-                [wall_inputs,soil_inputs],
+                 Div(text="<h3>Seismic Coefficients:</h3>", width=250)],
+                [wall_inputs,seismic_inputs],
                 [Div(text="<hr>", width=1050)],
-                [Div(text="<h3>Seismic Coefficients:</h3>", width=260)],
-                [seismic_inputs],
+                [Div(text="<h3>Soil Properties:</h3>", width=260)],
+                [soil_inputs],
+                [Div(text="<hr>", width=1050)],
                 [Div(text="<h4></h4>", width=40),
                  Div(text="<h4>Retaining Wall and Backfill Properties</h4>",
-                     width=350),
+                     width=370),
                  Div(text="<h4>Horizontal Pseudo-Static<br>"
                           "Lateral Earth Pressure</h4>",
-                     width=240),
-                 Div(text="<h4>Mohr circle corresponding to conjugate stress "
-                          "state at depth of the horizontal component of the "
-                          "lateral earth thrust</h4>",
-                     width=390)],
-                [plot,plot_sigma,mohr_plot],
-                [v_slider],
+                     width=225),
+                 Div(text="<h4>Mohr's circle with failure envelopes at "
+                          "depth, Zw,<br>from the top of wall surface</h4>",
+                     width=350),
+                 Div(text="<h4>Zw<br>(m)</h4>", width=70)],
+                [plot,Spacer(width=20),plot_sigma,Spacer(width=20),mohr_plot,zw_slider],
+                #[v_slider],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
