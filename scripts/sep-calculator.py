@@ -1,13 +1,13 @@
 from os.path import dirname, join
 
 import numpy as np
-from analysis import sep
+from analysis import sep, line_circle_intersect
 
 from bokeh.client import push_session
 from bokeh import models
 from bokeh.plotting import figure
 from bokeh.io import output_file, show, curdoc
-from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label, Div
+from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label, LabelSet, Div
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
 from bokeh.layouts import widgetbox, row, column, layout, Spacer
@@ -147,7 +147,8 @@ error.visible = False
 # Define Data Sources
 source_wall = ColumnDataSource(data=dict(x=x_wall,y=y_wall))
 source_earth = ColumnDataSource(data=dict(x=x_earth,y=y_earth))
-
+print(source_wall.data['x'])
+print(source_wall.data['y'])
 
 # Add patches to figure
 plot = figure(#title="Retaining Wall and Backfill Properties",
@@ -163,12 +164,59 @@ plot = figure(#title="Retaining Wall and Backfill Properties",
               tools=TOOLS)
 plot.xaxis.visible = False
 
-wall = Patch(x='x', y='y', fill_color = '#DCDDDE', line_color = 'black')
+wall = Patch(x='x',
+             y='y',
+             fill_color = '#DCDDDE',
+             line_color = 'black',
+             line_width=1.5)
 plot.add_glyph(source_wall, wall)
 
-earth = Patch(x='x', y='y', fill_color = '#FFFF99', line_color = 'black')
+earth = Patch(x='x',
+              y='y',
+              fill_color = '#FFFF99',
+              line_color = 'black',
+              line_width=1.5)
 plot.add_glyph(source_earth, earth)
 plot.min_border_left = 50
+
+
+plot.line(x=[source_wall.data['x'][2],8],
+          y=[source_wall.data['y'][2],source_wall.data['y'][2]],
+          line_color = 'black',
+          line_dash='dashed')
+
+plot.arc(x=source_wall.data['x'][2],
+         y=source_wall.data['y'][2],
+         radius=3.5,
+         start_angle=0,
+         end_angle=np.radians(beta),
+         line_width=1,
+         color='black')
+
+
+wall_label_data = ColumnDataSource(data=dict(
+                        x=[100,100,100,100],
+                        y=[100-i*15 for i in range(4)],
+                        names=['\u03B1h: {:.1f}g'.format(kh),
+                               '\u03B1v: {:.1f}g'.format(kv),
+                               '\u03C9: {:.0f}\u1d52'.format(omega),
+                               '\u03B2: {:.0f}\u1d52'.format(beta)]))
+
+wall_labels = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       #text_font_style='bold',
+                       text_align='center',
+                       #background_fill_color='white',
+                       source=wall_label_data)
+plot.add_layout(wall_labels)
+
+
+
 
 
 ##############################################################################
@@ -184,9 +232,9 @@ conj_slope = np.tan(np.radians(beta) + example.theta())
 mohr_line_data = ColumnDataSource(data=dict(
                 x_fail = [0, 1.5*example.Ja(H)],
                 y_fail = [c, c + (np.tan(np.radians(phi))*1.5*example.Ja(H))],
-                x_conj = [0, 1.7*example.Ja(H)],
+                x_conj = [0, 1.9*example.Ja(H)],
                 y_conj = [0, (np.tan(np.radians(beta) + example.theta())
-                             ) * 1.7 * example.Ja(H)],
+                             ) * 1.9 * example.Ja(H)],
                 )
             )
 
@@ -202,7 +250,7 @@ mohr_circle_data = ColumnDataSource(data=dict(
 
 
 
-mohr_plot = figure(x_axis_label="\u03C3' (kPa???)",
+mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
                    y_axis_label='\u03C4 (kPa)',
                    plot_width=400,
                    plot_height=400,
@@ -246,18 +294,154 @@ mohr_plot.circle(x='center',
                  #radius_dimension='y',
                  source=mohr_circle_data)
 
-mohr_depth = Label(x=100,
-              y=250,
-              x_units='screen',
-              y_units='screen',
-              text="Depth (Zw): {:.1f} m".format(H),
-              text_font_style='bold',
-              text_align='left',
-              text_font_size='11pt',
-              text_color='black')
-mohr_plot.add_layout(mohr_depth)
+# Calculate intersection points for effective stress envelope
+x_line_inter, y_line_inter = line_circle_intersect(
+                                h=mohr_circle_data.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data.data['radius'][0],
+                                angle=phi,
+                                c=c)
 
-print(mohr_circle_data.data['radius'])
+# Calculate intersection points for conjugate stress line
+x_conj_inter, y_conj_inter = line_circle_intersect(
+                                h=mohr_circle_data.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data.data['radius'][0],
+                                angle=beta+np.degrees(example.theta()),
+                                c=0)
+
+# Calculate intersection points at zero (sigma1, sigma3)
+x_sigma_inter, y_sigma_inter = line_circle_intersect(
+                                h=mohr_circle_data.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data.data['radius'][0],
+                                angle=0,
+                                c=0)
+
+
+
+# Store data in a ColumnDataSource
+intersect_data = ColumnDataSource(data=dict(
+                x_line_inter = x_line_inter,
+                y_line_inter = y_line_inter,
+                x_conj_inter = x_conj_inter,
+                y_conj_inter = y_conj_inter,
+                x_sigma_inter = x_sigma_inter,
+                y_sigma_inter = y_sigma_inter
+                )
+            )
+
+# Plot intersection points for effective stress envelope
+# mohr_plot.circle(x='x_line_inter',
+#                  y='y_line_inter',
+#                  line_color='#1F77B4',
+#                  line_width=2,
+#                  fill_color='white',
+#                  size=7,
+#                  source=intersect_data)
+
+# Plot intersection points for conjugate stress line
+mohr_plot.circle(x='x_conj_inter',
+                 y='y_conj_inter',
+                 line_color='orange',
+                 line_width=2,
+                 fill_color='white',
+                 size=7,
+                 source=intersect_data)
+
+# Plot intersection points at zero (sigma1, sigma3)
+# mohr_plot.circle(x='x_sigma_inter',
+#                  y='y_sigma_inter',
+#                  line_color='black',
+#                  line_width=2,
+#                  fill_color='white',
+#                  size=5,
+#                  source=intersect_data)
+
+
+arc_data = ColumnDataSource(data=dict(
+                x_phi = [-c/np.radians(phi)],
+                y_phi = [0],
+                phi_radius = [0.15 * 2.0 * example.Ja(H)],
+                phi_end_angle = [np.radians(phi)],
+                x_beta = [0],
+                y_beta = [0],
+                beta_radius = [0.16 * 2.0 * example.Ja(H)],
+                beta_end_angle = [np.radians(beta)+example.theta()]
+                )
+            )
+
+mohr_plot.arc(x='x_phi',
+              y='y_phi',
+              radius='phi_radius',
+              start_angle=0,
+              end_angle='phi_end_angle',
+              line_width=2,
+              color="#1F77B4",
+              source=arc_data)
+
+mohr_plot.arc(x='x_beta',
+              y='y_beta',
+              radius='beta_radius',
+              start_angle=0,
+              end_angle='beta_end_angle',
+              line_width=2,
+              color="orange",
+              source=arc_data)
+
+
+mohr_bold_label_data = ColumnDataSource(data=dict(
+                        x=[70,77.8,66,70,70],
+                        y=[300-i*17 for i in range(5)],
+                        names=['Zw: {:.1f} m'.format(H),
+                               '\u03D5: {:.0f}\u1d52'.format(phi),
+                               '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
+                                            np.degrees(example.theta())),
+                               "\u03C3'\u03B2: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj_inter'][1]),
+                               "\u03C3'\u03B8: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj_inter'][0]),
+                               ]))
+
+mohr_bold_labels = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       source=mohr_bold_label_data)
+mohr_plot.add_layout(mohr_bold_labels)
+
+
+mohr_sigma_label_data = ColumnDataSource(data=dict(
+                        x=intersect_data.data['x_conj_inter'],
+                        y=intersect_data.data['y_conj_inter'],
+                        names=["\u03C3'\u03B8",
+                               "\u03C3'\u03B2",
+                               ]))
+
+mohr_sigma_labels = LabelSet(x='x',
+                       y='y',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       background_fill_alpha=0.6,
+                       x_offset=8,
+                       #y_offset=5,
+                       source=mohr_sigma_label_data)
+mohr_plot.add_layout(mohr_sigma_labels)
+
+
+
+
+mohr_plot.legend.location = "top_left"
 
 
 ##############################################################################
@@ -365,8 +549,124 @@ def update_plot(attr, old, new):
     mohr_plot.y_range.end = 2.03 * new_example.Ja(H)
 
 
+
+    new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
+    new_sigma_x = new_example.sigma_AEH(new_sigma_y)
+    new_x_sigma = new_sigma_x.tolist()
+    new_y_sigma = new_sigma_y.tolist()
+    new_x_sigma.extend([0,0])
+    new_y_sigma.extend([new_example.Hl(),0])
+
+    ### Update the data
+    source_wall.data = dict(x=new_x_wall, y=new_y_wall)
+    source_earth.data = dict(x=new_x_earth, y=new_y_earth)
+    source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
+    plot_sigma.y_range.start=0.99*new_example.Hl()
+    plot_sigma.y_range.end=(new_example.Hl()-30)
+
+
+    wall_label_data.data=dict(
+                            x=[100,100,100,100],
+                            y=[100-i*15 for i in range(4)],
+                            names=['\u03B1h: {:.1f}g'.format(kh),
+                                   '\u03B1v: {:.1f}g'.format(kv),
+                                   '\u03C9: {:.0f}\u1d52'.format(omega),
+                                   '\u03B2: {:.0f}\u1d52'.format(beta)])
+
+
+
+    # Update Mohr circle
+    mohr_line_data.data = dict(
+        x_fail = [0, 1.5*new_example.Ja(H)],
+        y_fail = [c, c + (np.tan(np.radians(phi))*1.5*new_example.Ja(H))],
+        x_conj = [0, 1.9*new_example.Ja(H)],
+        y_conj = [0, (np.tan(np.radians(beta) + new_example.theta())
+                     ) * 1.9 * new_example.Ja(H)],
+        )
+
+    mohr_circle_data.data = dict(
+        y = [0],
+        center = [new_example.Ja(H)],
+        # Circle radius from equation 11
+        radius = [(c * (1/np.tan(np.radians(phi)))
+                   + new_example.Ja(H)) * np.sin(np.radians(phi))],
+        )
+
+    #mohr_depth.text="Depth (Zw): {:.1f} m".format(H)
+
+
+
+    # Calculate intersection points for effective stress envelope
+    x_line_inter, y_line_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0]*1.0000001,
+                                    angle=phi,
+                                    c=c)
+
+    # Calculate intersection points for conjugate stress line
+    x_conj_inter, y_conj_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0],
+                                    angle=beta+np.degrees(new_example.theta()),
+                                    c=0)
+
+    # Calculate intersection points at zero (sigma1, sigma3)
+    x_sigma_inter, y_sigma_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0],
+                                    angle=0,
+                                    c=0)
+
+
+    # Store data in a ColumnDataSource
+    intersect_data.data=dict(
+                    x_line_inter = x_line_inter,
+                    y_line_inter = y_line_inter,
+                    x_conj_inter = x_conj_inter,
+                    y_conj_inter = y_conj_inter,
+                    x_sigma_inter = x_sigma_inter,
+                    y_sigma_inter = y_sigma_inter
+                    )
+
+    arc_data.data=dict(
+                    x_phi = [-c/np.radians(phi)],
+                    y_phi = [0],
+                    phi_radius = [0.15 * 2.0 * new_example.Ja(H)],
+                    phi_end_angle = [np.radians(phi)],
+                    x_beta = [0],
+                    y_beta = [0],
+                    beta_radius = [0.16 * 2.0 * new_example.Ja(H)],
+                    beta_end_angle = [np.radians(beta)+new_example.theta()]
+                    )
+
+    mohr_bold_label_data.data=dict(
+                            x=[70,77.8,66,70,70],
+                            y=[300-i*17 for i in range(5)],
+                            names=['Zw: {:.1f} m'.format(H),
+                                   '\u03D5: {:.0f}\u1d52'.format(phi),
+                                   '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
+                                                np.degrees(new_example.theta())),
+                                   "\u03C3'\u03B2: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj_inter'][1]),
+                                   "\u03C3'\u03B8: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj_inter'][0]),
+                                   ])
+
+    mohr_sigma_label_data.data=dict(
+                            x=intersect_data.data['x_conj_inter'],
+                            y=intersect_data.data['y_conj_inter'],
+                            names=["\u03C3'\u03B8",
+                                   "\u03C3'\u03B2",
+                                   ])
+
+
     ### IF clause for beta + theta < phi
-    if beta + np.degrees(new_example.theta()) > phi:
+    # UPDATE: IF clause for NO INTERSECTION
+    #if beta + np.degrees(new_example.theta()) > phi:
+    if np.isnan(intersect_data.data['x_conj_inter'][0]):
         # sigma_plot.fill_alpha = 0
         # sigma_plot.line_alpha = 0
         # arrow1.visible = False
@@ -384,40 +684,6 @@ def update_plot(attr, old, new):
         error.visible = False
         mohr_plot.background_fill_color = None
 
-
-
-    new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
-    new_sigma_x = new_example.sigma_AEH(new_sigma_y)
-    new_x_sigma = new_sigma_x.tolist()
-    new_y_sigma = new_sigma_y.tolist()
-    new_x_sigma.extend([0,0])
-    new_y_sigma.extend([new_example.Hl(),0])
-
-    ### Update the data
-    source_wall.data = dict(x=new_x_wall, y=new_y_wall)
-    source_earth.data = dict(x=new_x_earth, y=new_y_earth)
-    source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
-    plot_sigma.y_range.start=0.99*new_example.Hl()
-    plot_sigma.y_range.end=(new_example.Hl()-30)
-
-    # Update Mohr circle
-    mohr_line_data.data = dict(
-        x_fail = [0, 1.5*new_example.Ja(H)],
-        y_fail = [c, c + (np.tan(np.radians(phi))*1.5*new_example.Ja(H))],
-        x_conj = [0, 1.7*new_example.Ja(H)],
-        y_conj = [0, (np.tan(np.radians(beta) + new_example.theta())
-                     ) * 1.7 * new_example.Ja(H)],
-        )
-
-    mohr_circle_data.data = dict(
-        y = [0],
-        center = [new_example.Ja(H)],
-        # Circle radius from equation 11
-        radius = [(c * (1/np.tan(np.radians(phi)))
-                   + new_example.Ja(H)) * np.sin(np.radians(phi))],
-        )
-
-    mohr_depth.text="Depth (Zw): {:.1f} m".format(H)
 
 
 
@@ -482,8 +748,72 @@ def update_mohr_zw(attr, old, new):
                    + new_example.Ja(zwd)) * np.sin(np.radians(phi))],
         )
 
-    mohr_depth.text="Depth (Zw): {:.1f} m".format(zwd)
+    #mohr_depth.text="Depth (Zw): {:.1f} m".format(zwd)
 
+
+    # Calculate intersection points for effective stress envelope
+    x_line_inter, y_line_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0]*1.0000001,
+                                    angle=phi,
+                                    c=c)
+
+    # Calculate intersection points for conjugate stress line
+    x_conj_inter, y_conj_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0],
+                                    angle=beta+np.degrees(new_example.theta()),
+                                    c=0)
+
+    # Calculate intersection points at zero (sigma1, sigma3)
+    x_sigma_inter, y_sigma_inter = line_circle_intersect(
+                                    h=mohr_circle_data.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data.data['radius'][0],
+                                    angle=0,
+                                    c=0)
+
+
+    # Store data in a ColumnDataSource
+    intersect_data.data=dict(
+                    x_line_inter = x_line_inter,
+                    y_line_inter = y_line_inter,
+                    x_conj_inter = x_conj_inter,
+                    y_conj_inter = y_conj_inter,
+                    x_sigma_inter = x_sigma_inter,
+                    y_sigma_inter = y_sigma_inter
+                    )
+
+
+    mohr_sigma_label_data.data=dict(
+                            x=intersect_data.data['x_conj_inter'],
+                            y=intersect_data.data['y_conj_inter'],
+                            names=["\u03C3'\u03B8",
+                                   "\u03C3'\u03B2",
+                                   ])
+
+
+
+    # UPDATE: IF clause for NO INTERSECTION
+    if np.isnan(intersect_data.data['x_conj_inter'][0]):
+        # sigma_plot.fill_alpha = 0
+        # sigma_plot.line_alpha = 0
+        # arrow1.visible = False
+        # load1.visible = False
+        # h_load1.visible = False
+        # error.visible = True
+        mohr_plot.background_fill_color = 'red'
+
+    else:
+        # sigma_plot.fill_alpha = 1
+        # sigma_plot.line_alpha = 1
+        # arrow1.visible = True
+        # load1.visible = True
+        # h_load1.visible = True
+        # error.visible = False
+        mohr_plot.background_fill_color = None
 
 
 # Sliders
