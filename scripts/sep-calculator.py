@@ -22,6 +22,7 @@ phi = 30
 gamma = 23
 c = 20
 H = 15
+ewt = -H/2
 
 # Retaining Wall Coordinates
 xA = 0
@@ -46,11 +47,20 @@ xF = xE
 yF = 0
 
 
+# EWT Coordinates
+xK = xC + abs(ewt) * np.tan(np.radians(omega))
+yK = H + ewt    # Note: ewt is negative
+
+xL = xE
+yL = H + ewt    # Note: ewt is negative
+
 # List of coordinates
 x_wall = [xA, xB, xC, xD]
 y_wall = [yA, yB, yC, yD]
 x_earth = [xC, xE, xF, xD]
 y_earth = [yC, yE, yF, yD]
+x_ewt = [xK, xL, xF, xD]
+y_ewt = [yK, yL, yF, yD]
 
 # Calculating example values
 example = sep(kh, kv, omega, beta, phi, gamma, c, H)
@@ -147,8 +157,7 @@ error.visible = False
 # Define Data Sources
 source_wall = ColumnDataSource(data=dict(x=x_wall,y=y_wall))
 source_earth = ColumnDataSource(data=dict(x=x_earth,y=y_earth))
-print(source_wall.data['x'])
-print(source_wall.data['y'])
+source_ewt = ColumnDataSource(data=dict(x=x_ewt,y=y_ewt))
 
 # Add patches to figure
 plot = figure(#title="Retaining Wall and Backfill Properties",
@@ -179,19 +188,27 @@ earth = Patch(x='x',
 plot.add_glyph(source_earth, earth)
 plot.min_border_left = 50
 
+water = Patch(x='x',
+              y='y',
+              fill_color = 'LightSeaGreen',
+              fill_alpha = 0.075,
+              line_color = 'LightSeaGreen',
+              line_width=1.5)
+plot.add_glyph(source_ewt, water)
 
-plot.line(x=[source_wall.data['x'][2],8],
-          y=[source_wall.data['y'][2],source_wall.data['y'][2]],
-          line_color = 'black',
-          line_dash='dashed')
-
-plot.arc(x=source_wall.data['x'][2],
-         y=source_wall.data['y'][2],
-         radius=3.5,
-         start_angle=0,
-         end_angle=np.radians(beta),
-         line_width=1,
-         color='black')
+# Beta angle
+# plot.line(x=[source_wall.data['x'][2],8],
+#           y=[source_wall.data['y'][2],source_wall.data['y'][2]],
+#           line_color = 'black',
+#           line_dash='dashed')
+#
+# plot.arc(x=source_wall.data['x'][2],
+#          y=source_wall.data['y'][2],
+#          radius=3.5,
+#          start_angle=0,
+#          end_angle=np.radians(beta),
+#          line_width=1,
+#          color='black')
 
 
 wall_label_data = ColumnDataSource(data=dict(
@@ -209,7 +226,7 @@ wall_labels = LabelSet(x='x',
                        text='names',
                        text_font_size='9pt',
                        text_color='black',
-                       #text_font_style='bold',
+                       text_font_style='bold',
                        text_align='center',
                        #background_fill_color='white',
                        source=wall_label_data)
@@ -511,7 +528,9 @@ def update_plot(attr, old, new):
     gamma = gamma_slider.value
     kh = kh_slider.value
     kv = kv_slider.value
+    ewt = ewt_slider.value
 
+    ewt_slider.start = -H
     zw_slider.end = H
     zw_slider.value = H
 
@@ -536,11 +555,20 @@ def update_plot(attr, old, new):
     new_xF = new_xE
     new_yF = 0
 
+    # New EWT Coordinates
+    new_xK = new_xC + abs(ewt) * np.tan(np.radians(omega))
+    new_yK = H + ewt    # Note: ewt is negative
+
+    new_xL = new_xE
+    new_yL = H + ewt    # Note: ewt is negative
+
     ### New list of coordinates
     new_x_wall = [new_xA, new_xB, new_xC, new_xD]
     new_y_wall = [new_yA, new_yB, new_yC, new_yD]
     new_x_earth = [new_xC, new_xE, new_xF, new_xD]
     new_y_earth = [new_yC, new_yE, new_yF, new_yD]
+    new_x_ewt = [new_xK, new_xL, new_xF, new_xD]
+    new_y_ewt = [new_yK, new_yL, new_yF, new_yD]
 
     ### New example values
     new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
@@ -560,6 +588,7 @@ def update_plot(attr, old, new):
     ### Update the data
     source_wall.data = dict(x=new_x_wall, y=new_y_wall)
     source_earth.data = dict(x=new_x_earth, y=new_y_earth)
+    source_ewt.data = dict(x=new_x_ewt, y=new_y_ewt)
     source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
     plot_sigma.y_range.start=0.99*new_example.Hl()
     plot_sigma.y_range.end=(new_example.Hl()-30)
@@ -748,8 +777,6 @@ def update_mohr_zw(attr, old, new):
                    + new_example.Ja(zwd)) * np.sin(np.radians(phi))],
         )
 
-    #mohr_depth.text="Depth (Zw): {:.1f} m".format(zwd)
-
 
     # Calculate intersection points for effective stress envelope
     x_line_inter, y_line_inter = line_circle_intersect(
@@ -785,6 +812,19 @@ def update_mohr_zw(attr, old, new):
                     x_sigma_inter = x_sigma_inter,
                     y_sigma_inter = y_sigma_inter
                     )
+
+    mohr_bold_label_data.data=dict(
+                            x=[70,77.8,66,70,70],
+                            y=[300-i*17 for i in range(5)],
+                            names=['Zw: {:.1f} m'.format(zwd),
+                                   '\u03D5: {:.0f}\u1d52'.format(phi),
+                                   '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
+                                                np.degrees(new_example.theta())),
+                                   "\u03C3'\u03B2: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj_inter'][1]),
+                                   "\u03C3'\u03B8: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj_inter'][0]),
+                                   ])
 
 
     mohr_sigma_label_data.data=dict(
@@ -822,7 +862,7 @@ H_value = Slider(
                 end=25,
                 step=0.5,
                 value=15,
-                title='Retaining wall height, H, (m)')
+                title='Wall height, H, (m)')
 omega_slider = Slider(
                 start=0,
                 end=30,
@@ -840,7 +880,7 @@ phi_slider = Slider(
                 end=45,
                 step=1,
                 value=30,
-                title='Ιnternal friction angle, \u03C6, (degrees)')
+                title='Ιnternal friction, \u03C6, (degrees)')
 c_slider = Slider(
                 start=0,
                 end=100,
@@ -858,13 +898,26 @@ kh_slider = Slider(
                 end=0.4,
                 step=0.1,
                 value=0.2,
-                title='Horizontal Seismic Coefficient, kh')
+                title='Horizontal, kh')
 kv_slider = Slider(
                 start=-0.4,
                 end=0.4,
                 step=0.1,
                 value=-0.1,
-                title='Vertical Seismic Coefficient, kv')
+                title='Vertical, kv')
+ewt_slider = Slider(
+                start=-H,
+                end=0,
+                step=0.1,
+                value=-H/2,
+                orientation="vertical",
+                direction='rtl',
+                show_value=False,
+                height=340,
+                width=25,
+                callback_throttle=0,
+                #tooltips=False
+                )
 zw_slider = Slider(
                 start=0,
                 end=H,
@@ -875,7 +928,8 @@ zw_slider = Slider(
                 direction='ltr',
                 show_value=False,
                 height=340,
-                width=25)
+                width=25,
+                tooltips=False)
 
 
 # Attach the callback to the 'value' property of slider
@@ -887,33 +941,36 @@ c_slider.on_change('value', update_plot)
 gamma_slider.on_change('value', update_plot)
 kh_slider.on_change('value', update_plot)
 kv_slider.on_change('value', update_plot)
+ewt_slider.on_change('value', update_plot)
 zw_slider.on_change('value', update_mohr_zw)
 
 
 page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(), width=1050)
 page_footer = Div(text=open(join(dirname(__file__), "page_footer.html")).read(), width=1050)
 wall_controls = [H_value,omega_slider,beta_slider]
-wall_inputs = widgetbox(*wall_controls, width=260)
+wall_inputs = widgetbox(*wall_controls, width=220)
 
 seismic_controls = [kh_slider,kv_slider]
-seismic_inputs = widgetbox(*seismic_controls, width=260)
+seismic_inputs = widgetbox(*seismic_controls, width=180)
 
 soil_controls = [phi_slider,c_slider,gamma_slider]
-soil_inputs = widgetbox(*soil_controls, width=260)
+soil_inputs = widgetbox(*soil_controls, width=220)
 
 # The layout function replaces the row and column functions
 page_layout = layout([
                 [page_header],
-                [Div(text="<h3>Wall Properties:</h3>", width=260),
-                 Div(text="<h3>Seismic Coefficients:</h3>", width=250)],
-                [wall_inputs,seismic_inputs],
-                [Div(text="<hr>", width=1050)],
-                [Div(text="<h3>Soil Properties:</h3>", width=260)],
-                [soil_inputs],
+                [Div(text="<h3>Wall Properties:</h3>", width=220),
+                 Div(text="<h3>Seismic Coefficients:</h3>", width=180),
+                 Div(text="<h3>Soil Properties:</h3>", width=220)],
+                [wall_inputs, seismic_inputs, soil_inputs],
+                #[Div(text="<hr>", width=1050)],
+                #[Div(text="<h3>Soil Properties:</h3>", width=260)],
+                #[soil_inputs],
                 [Div(text="<hr>", width=1050)],
                 [Div(text="<h4></h4>", width=40),
                  Div(text="<h4>Retaining Wall and Backfill Properties</h4>",
-                     width=370),
+                     width=300),
+                 Div(text="<h4>EWT<br>&nbsp;(m)</h4>", width=95),
                  Div(text="<h4>Horizontal Pseudo-Static<br>"
                           "Lateral Earth Pressure</h4>",
                      width=225),
@@ -921,8 +978,9 @@ page_layout = layout([
                           "depth, Zw,<br>from the top of wall surface</h4>",
                      width=350),
                  Div(text="<h4>Zw<br>(m)</h4>", width=70)],
-                [plot,Spacer(width=20),plot_sigma,Spacer(width=20),mohr_plot,zw_slider],
-                #[v_slider],
+                [plot, Spacer(width=50), ewt_slider, Spacer(width=20),
+                 plot_sigma, Spacer(width=20),
+                 mohr_plot, zw_slider],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
