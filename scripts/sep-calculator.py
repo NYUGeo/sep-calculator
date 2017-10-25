@@ -22,7 +22,7 @@ phi = 30
 gamma = 23
 c = 20
 H = 15
-ewt = -H/2
+ewt = -H
 gamma_w = 9.8
 
 
@@ -84,6 +84,24 @@ layer_dry = sep(kh, kv, omega, beta, phi, gamma, c, abs(ewt))
 layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, H+ewt)
 
 
+# Shoelace formula
+# https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
+def PolyArea(x,y):
+    # for this problem, keep only the positive forces
+    x_pos = []
+    y_pos = []
+
+    for k, l in zip(x, y):
+        if k >= 0:
+            x_pos.append(k)
+            y_pos.append(l)
+        else:
+            pass
+
+    #return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
+    return 0.5*np.abs(np.dot(x_pos,np.roll(y_pos,1))-np.dot(y_pos,np.roll(x_pos,1)))
+
+
 ##############################################################################
 ###                              STRESS PLOT                               ###
 ##############################################################################
@@ -126,8 +144,6 @@ y_sigma_all.extend([layer_dry.Hl()+layer_wet.Hl(),0])
 layer_sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
 
 
-
-
 # Tools in toolbox
 TOOLS = 'pan,box_zoom,reset,save'
 
@@ -144,6 +160,11 @@ plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
 
 sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
 plot_sigma.add_glyph(source_example, sigma_plot)
+
+
+load_height_top = ((layer_dry.Hl()+layer_wet.Hl())
+                - ((layer_dry.Hl()+layer_wet.Hl()) - layer_dry.Hzc())/3)
+load_height_bot = ((layer_dry.Hl()+layer_wet.Hl()) - layer_dry.Hzc())/3
 
 # Arrow data
 source_arrow1 = ColumnDataSource(data={
@@ -163,12 +184,9 @@ arrow1 = Arrow(end=OpenHead(line_color="black",
                source=source_arrow1)
 plot_sigma.add_layout(arrow1)
 
-# Shoelace formula
-# https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
-def PolyArea(x,y):
-    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
 
-print(PolyArea(x_sigma,y_sigma))
+print(example.sigma_AEH(example.H))
+
 
 load1 = Label(x=0.3*example.sigma_AEH(example.H),
               y=example.Hl()-example.Hp1(),
@@ -252,6 +270,7 @@ plot = figure(#title="Retaining Wall and Backfill Properties",
               #toolbar_location="above",
               toolbar_location=None,
               toolbar_sticky=False,
+              background_fill_alpha=0.1,
               tools=TOOLS)
 plot.xaxis.visible = False
 
@@ -336,6 +355,19 @@ soil_labels = LabelSet(x='x',
                        source=soil_label_data)
 plot.add_layout(soil_labels)
 
+error_c = Label(x=150,
+              y=300,
+              x_units='screen',
+              y_units='screen',
+              render_mode='css',
+              text="Set c = 0 or drop EWT below wall",
+              text_font_style='bold',
+              text_align='center',
+              border_line_width=2,
+              text_font_size='12pt',
+              text_color='red')
+plot.add_layout(error_c)
+error_c.visible = False
 
 
 ##############################################################################
@@ -631,6 +663,8 @@ def update_plot(attr, old, new):
     kh = kh_slider.value
     kv = kv_slider.value
     ewt = ewt_slider.value
+    if ewt == 0:
+        ewt = 0.0000001
 
     ewt_slider.start = -H
     zw_slider.end = H
@@ -672,14 +706,16 @@ def update_plot(attr, old, new):
     new_x_ewt = [new_xK, new_xL, new_xF, new_xD]
     new_y_ewt = [new_yK, new_yL, new_yF, new_yD]
 
-    ### New example values
+    ### New calculated values
     new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
+    new_layer_dry = sep(kh, kv, omega, beta, phi, gamma, c, min(H,abs(ewt)))
+    new_layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, max(0,H+ewt))
+
 
     mohr_plot.x_range.end = 2.0 * new_example.Ja(H)
     mohr_plot.y_range.end = 2.03 * new_example.Ja(H)
 
-
-
+    # Old
     new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
     new_sigma_x = new_example.sigma_AEH(new_sigma_y)
     new_x_sigma = new_sigma_x.tolist()
@@ -687,14 +723,31 @@ def update_plot(attr, old, new):
     new_x_sigma.extend([0,0])
     new_y_sigma.extend([new_example.Hl(),0])
 
+    # New
+    new_sigma_y_dry = np.arange(0.0001, new_layer_dry.Hl(), 0.1)
+    new_sigma_x_dry = new_layer_dry.sigma_AEH(new_sigma_y_dry)
+    new_sigma_y_wet = np.arange(0.0001, new_layer_wet.Hl(), 0.1)
+    new_sigma_x_wet = new_layer_wet.sigma_AEH(new_sigma_y_wet) + new_layer_dry.sigma_AEH(new_layer_dry.Hl())
+    new_x_sigma_all = new_sigma_x_dry.tolist()
+    new_x_sigma_all.extend(new_sigma_x_wet.tolist())
+    new_x_sigma_all.extend([0,0])
+    new_y_sigma_all = new_sigma_y_dry.tolist()
+    new_y_sigma_all.extend((new_sigma_y_wet + new_layer_dry.Hl()).tolist())
+    new_y_sigma_all.extend([new_layer_dry.Hl()+new_layer_wet.Hl(),0])
+
     ### Update the data
     source_wall.data = dict(x=new_x_wall, y=new_y_wall)
     source_earth.data = dict(x=new_x_earth, y=new_y_earth)
     source_ewt.data = dict(x=new_x_ewt, y=new_y_ewt)
     source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
+    layer_sigma_data.data=dict(x=new_x_sigma_all, y=new_y_sigma_all)
+    force = PolyArea(new_x_sigma_all,new_y_sigma_all) * np.cos(np.radians(omega))
+    print(force)
     plot_sigma.y_range.start=0.99*new_example.Hl()
     plot_sigma.y_range.end=(new_example.Hl()-30)
 
+    test_plot.y_range.start=0.99*(new_layer_dry.Hl()+new_layer_wet.Hl())
+    test_plot.y_range.end= (new_layer_dry.Hl()+new_layer_wet.Hl()) - 30
 
     wall_label_data.data=dict(
                             x=[100,100,100,100],
@@ -824,6 +877,13 @@ def update_plot(attr, old, new):
         mohr_plot.background_fill_color = None
 
 
+    # Error for c>0 and ewt
+    if (abs(ewt) < H) and (c > 0):
+        error_c.visible = True
+        plot.background_fill_color = 'red'
+    else:
+        error_c.visible = False
+        plot.background_fill_color = None
 
 
     ### Update tabulated data
@@ -1019,7 +1079,7 @@ ewt_slider = Slider(
                 start=-H,
                 end=0,
                 step=0.1,
-                value=-H/2,
+                value=-H,
                 orientation="vertical",
                 direction='rtl',
                 show_value=False,
