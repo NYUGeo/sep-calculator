@@ -23,6 +23,12 @@ gamma = 23
 c = 20
 H = 15
 ewt = -H/2
+gamma_w = 9.8
+
+
+##############################################################################
+###                     INITIAL WALL AND SOIL PATCHES                      ###
+##############################################################################
 
 # Retaining Wall Coordinates
 xA = 0
@@ -54,6 +60,7 @@ yK = H + ewt    # Note: ewt is negative
 xL = xE
 yL = H + ewt    # Note: ewt is negative
 
+
 # List of coordinates
 x_wall = [xA, xB, xC, xD]
 y_wall = [yA, yB, yC, yD]
@@ -62,17 +69,63 @@ y_earth = [yC, yE, yF, yD]
 x_ewt = [xK, xL, xF, xD]
 y_ewt = [yK, yL, yF, yD]
 
-# Calculating example values
+
+##############################################################################
+###                                LAYERS                                  ###
+##############################################################################
+
+layer_heights = [abs(ewt), H+ewt]
+
+
+# Calculating values
 example = sep(kh, kv, omega, beta, phi, gamma, c, H)
+
+layer_dry = sep(kh, kv, omega, beta, phi, gamma, c, abs(ewt))
+layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, H+ewt)
+
+
+##############################################################################
+###                              STRESS PLOT                               ###
+##############################################################################
 
 sigma_y = np.arange(0.0001, example.Hl(), 0.1)
 sigma_x = example.sigma_AEH(sigma_y)
+
+sigma_y_dry = np.arange(0.0001, layer_dry.Hl(), 0.1)
+sigma_x_dry = layer_dry.sigma_AEH(sigma_y_dry)
+sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
+sigma_x_wet = layer_wet.sigma_AEH(sigma_y_wet) + layer_dry.sigma_AEH(layer_dry.Hl())
 
 x_sigma = sigma_x.tolist()
 y_sigma = sigma_y.tolist()
 x_sigma.extend([0,0])
 y_sigma.extend([example.Hl(),0])
 source_example = ColumnDataSource(data=dict(x=x_sigma, y=y_sigma))
+
+def PolyArea(x,y):
+    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
+
+print(PolyArea(x_sigma,y_sigma))
+
+x_sigma_dry = sigma_x_dry.tolist()
+y_sigma_dry = sigma_y_dry.tolist()
+x_sigma_dry.extend([0,0])
+y_sigma_dry.extend([layer_dry.Hl(),0])
+layer_dry_sigma_data = ColumnDataSource(data=dict(x=x_sigma_dry, y=y_sigma_dry))
+
+x_sigma_wet = sigma_x_wet.tolist()
+y_sigma_wet = (sigma_y_wet + layer_dry.Hl()).tolist()
+x_sigma_wet.extend([0,0])
+y_sigma_wet.extend([layer_dry.Hl()+layer_wet.Hl(),layer_dry.Hl()])
+layer_wet_sigma_data = ColumnDataSource(data=dict(x=x_sigma_wet, y=y_sigma_wet))
+
+x_sigma_all = sigma_x_dry.tolist()
+x_sigma_all.extend(sigma_x_wet.tolist())
+x_sigma_all.extend([0,0])
+y_sigma_all = sigma_y_dry.tolist()
+y_sigma_all.extend((sigma_y_wet + layer_dry.Hl()).tolist())
+y_sigma_all.extend([layer_dry.Hl()+layer_wet.Hl(),0])
+layer_sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
 
 # Arrow data
 source_arrow1 = ColumnDataSource(data={
@@ -81,10 +134,6 @@ source_arrow1 = ColumnDataSource(data={
         'y1': [example.Hl()-example.Hp1()]
 })
 
-
-##############################################################################
-###                              STRESS PLOT                               ###
-##############################################################################
 
 # Tools in toolbox
 TOOLS = 'pan,box_zoom,reset,save'
@@ -148,6 +197,33 @@ error = Label(x=115,
               text_color='red')
 plot_sigma.add_layout(error)
 error.visible = False
+
+
+
+
+
+
+test_plot = figure( x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)", # sigma_AEH
+                    y_axis_label="Depth Along Wall Length 'Zl' (m)",
+                    y_range=(0.99*example.Hl(),example.Hl()-30),
+                    plot_width=200,
+                    plot_height=400,
+                    toolbar_location=None,
+                    toolbar_sticky=False)
+
+test_sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
+#test_plot.add_glyph(layer_dry_sigma_data, test_sigma_plot)
+#test_plot.add_glyph(layer_wet_sigma_data, test_sigma_plot)
+test_plot.add_glyph(layer_sigma_data, test_sigma_plot)
+
+
+
+
+
+
+
+
+
 
 
 ##############################################################################
@@ -916,14 +992,13 @@ ewt_slider = Slider(
                 height=340,
                 width=25,
                 callback_throttle=0,
-                #tooltips=False
-                )
+                tooltips=False,
+                bar_color='#e8f7f6')
 zw_slider = Slider(
                 start=0,
                 end=H,
                 step=0.1,
                 value=H,
-                #title='Zw',
                 orientation="vertical",
                 direction='ltr',
                 show_value=False,
@@ -978,9 +1053,10 @@ page_layout = layout([
                           "depth, Zw,<br>from the top of wall surface</h4>",
                      width=350),
                  Div(text="<h4>Zw<br>(m)</h4>", width=70)],
-                [plot, Spacer(width=50), ewt_slider, Spacer(width=20),
+                [plot, ewt_slider, Spacer(width=20),
                  plot_sigma, Spacer(width=20),
                  mohr_plot, zw_slider],
+                [test_plot],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
