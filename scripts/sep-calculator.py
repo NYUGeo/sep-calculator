@@ -88,13 +88,9 @@ layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, H+ewt)
 ###                              STRESS PLOT                               ###
 ##############################################################################
 
+# Old
 sigma_y = np.arange(0.0001, example.Hl(), 0.1)
 sigma_x = example.sigma_AEH(sigma_y)
-
-sigma_y_dry = np.arange(0.0001, layer_dry.Hl(), 0.1)
-sigma_x_dry = layer_dry.sigma_AEH(sigma_y_dry)
-sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
-sigma_x_wet = layer_wet.sigma_AEH(sigma_y_wet) + layer_dry.sigma_AEH(layer_dry.Hl())
 
 x_sigma = sigma_x.tolist()
 y_sigma = sigma_y.tolist()
@@ -102,22 +98,24 @@ x_sigma.extend([0,0])
 y_sigma.extend([example.Hl(),0])
 source_example = ColumnDataSource(data=dict(x=x_sigma, y=y_sigma))
 
-def PolyArea(x,y):
-    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
 
-print(PolyArea(x_sigma,y_sigma))
+# New
+sigma_y_dry = np.arange(0.0001, layer_dry.Hl(), 0.1)
+sigma_x_dry = layer_dry.sigma_AEH(sigma_y_dry)
+sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
+sigma_x_wet = layer_wet.sigma_AEH(sigma_y_wet) + layer_dry.sigma_AEH(layer_dry.Hl())
 
-x_sigma_dry = sigma_x_dry.tolist()
-y_sigma_dry = sigma_y_dry.tolist()
-x_sigma_dry.extend([0,0])
-y_sigma_dry.extend([layer_dry.Hl(),0])
-layer_dry_sigma_data = ColumnDataSource(data=dict(x=x_sigma_dry, y=y_sigma_dry))
+# x_sigma_dry = sigma_x_dry.tolist()
+# y_sigma_dry = sigma_y_dry.tolist()
+# x_sigma_dry.extend([0,0])
+# y_sigma_dry.extend([layer_dry.Hl(),0])
+# layer_dry_sigma_data = ColumnDataSource(data=dict(x=x_sigma_dry, y=y_sigma_dry))
 
-x_sigma_wet = sigma_x_wet.tolist()
-y_sigma_wet = (sigma_y_wet + layer_dry.Hl()).tolist()
-x_sigma_wet.extend([0,0])
-y_sigma_wet.extend([layer_dry.Hl()+layer_wet.Hl(),layer_dry.Hl()])
-layer_wet_sigma_data = ColumnDataSource(data=dict(x=x_sigma_wet, y=y_sigma_wet))
+# x_sigma_wet = sigma_x_wet.tolist()
+# y_sigma_wet = (sigma_y_wet + layer_dry.Hl()).tolist()
+# x_sigma_wet.extend([0,0])
+# y_sigma_wet.extend([layer_dry.Hl()+layer_wet.Hl(),layer_dry.Hl()])
+# layer_wet_sigma_data = ColumnDataSource(data=dict(x=x_sigma_wet, y=y_sigma_wet))
 
 x_sigma_all = sigma_x_dry.tolist()
 x_sigma_all.extend(sigma_x_wet.tolist())
@@ -127,19 +125,13 @@ y_sigma_all.extend((sigma_y_wet + layer_dry.Hl()).tolist())
 y_sigma_all.extend([layer_dry.Hl()+layer_wet.Hl(),0])
 layer_sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
 
-# Arrow data
-source_arrow1 = ColumnDataSource(data={
-        'x0': [example.sigma_AEH(example.H)],
-        'y0': [example.Hl()-example.Hp1()],
-        'y1': [example.Hl()-example.Hp1()]
-})
+
 
 
 # Tools in toolbox
 TOOLS = 'pan,box_zoom,reset,save'
 
 plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
-                    #title_location="above",
                     x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)", # sigma_AEH
                     y_axis_label="Depth Along Wall Length 'Zl' (m)",
                     y_range=(0.99*example.Hl(),example.Hl()-30),
@@ -153,6 +145,13 @@ plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
 sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
 plot_sigma.add_glyph(source_example, sigma_plot)
 
+# Arrow data
+source_arrow1 = ColumnDataSource(data={
+        'x0': [example.sigma_AEH(example.H)],
+        'y0': [example.Hl()-example.Hp1()],
+        'y1': [example.Hl()-example.Hp1()]
+})
+
 arrow1 = Arrow(end=OpenHead(line_color="black",
                             line_width=3,
                             line_join='bevel'),
@@ -163,6 +162,13 @@ arrow1 = Arrow(end=OpenHead(line_color="black",
                y_end='y1',
                source=source_arrow1)
 plot_sigma.add_layout(arrow1)
+
+# Shoelace formula
+# https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
+def PolyArea(x,y):
+    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
+
+print(PolyArea(x_sigma,y_sigma))
 
 load1 = Label(x=0.3*example.sigma_AEH(example.H),
               y=example.Hl()-example.Hp1(),
@@ -309,6 +315,26 @@ wall_labels = LabelSet(x='x',
 plot.add_layout(wall_labels)
 
 
+soil_label_data = ColumnDataSource(data=dict(
+                        x=[227,210,227,227,227],
+                        y=[180-i*15 for i in range(5)],
+                        names=['H: {:.1f} m'.format(H),
+                               'EWT: {:.1f} m'.format(ewt),
+                               '\u03C6: {:.0f}\u1d52'.format(phi),
+                               'c: {:.0f} kPa'.format(c),
+                               '\u03B3: {:.0f}\u1d52'.format(gamma)]))
+
+soil_labels = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       source=soil_label_data)
+plot.add_layout(soil_labels)
 
 
 
@@ -678,6 +704,14 @@ def update_plot(attr, old, new):
                                    '\u03C9: {:.0f}\u1d52'.format(omega),
                                    '\u03B2: {:.0f}\u1d52'.format(beta)])
 
+    soil_label_data.data=dict(
+                            x=[227,210,227,227,227],
+                            y=[120*(H/10)-i*15 for i in range(5)],
+                            names=['H: {:.1f} m'.format(H),
+                                   'EWT: {:.1f} m'.format(ewt),
+                                   '\u03C6: {:.0f}\u1d52'.format(phi),
+                                   'c: {:.0f} kPa'.format(c),
+                                   '\u03B3: {:.0f}\u1d52'.format(gamma)])
 
 
     # Update Mohr circle
@@ -944,19 +978,19 @@ omega_slider = Slider(
                 end=30,
                 step=1,
                 value=20,
-                title='Wall inclination, \u03C9, (degrees)')
+                title='Wall inclination, \u03C9, (deg.)')
 beta_slider = Slider(
                 start=-30,
                 end=30,
                 step=1,
                 value=15,
-                title='Surface slope, \u03B2, (degrees)')
+                title='Surface slope, \u03B2, (deg.)')
 phi_slider = Slider(
                 start=0,
                 end=45,
                 step=1,
                 value=30,
-                title='Ιnternal friction, \u03C6, (degrees)')
+                title='Ιnternal friction, \u03C6, (deg.)')
 c_slider = Slider(
                 start=0,
                 end=100,
@@ -1023,20 +1057,20 @@ zw_slider.on_change('value', update_mohr_zw)
 page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(), width=1050)
 page_footer = Div(text=open(join(dirname(__file__), "page_footer.html")).read(), width=1050)
 wall_controls = [H_value,omega_slider,beta_slider]
-wall_inputs = widgetbox(*wall_controls, width=220)
+wall_inputs = widgetbox(*wall_controls, width=200)
 
 seismic_controls = [kh_slider,kv_slider]
 seismic_inputs = widgetbox(*seismic_controls, width=180)
 
 soil_controls = [phi_slider,c_slider,gamma_slider]
-soil_inputs = widgetbox(*soil_controls, width=220)
+soil_inputs = widgetbox(*soil_controls, width=200)
 
 # The layout function replaces the row and column functions
 page_layout = layout([
                 [page_header],
-                [Div(text="<h3>Wall Properties:</h3>", width=220),
+                [Div(text="<h3>Wall Properties:</h3>", width=200),
                  Div(text="<h3>Seismic Coefficients:</h3>", width=180),
-                 Div(text="<h3>Soil Properties:</h3>", width=220)],
+                 Div(text="<h3>Soil Properties:</h3>", width=200)],
                 [wall_inputs, seismic_inputs, soil_inputs],
                 #[Div(text="<hr>", width=1050)],
                 #[Div(text="<h3>Soil Properties:</h3>", width=260)],
