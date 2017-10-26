@@ -82,7 +82,7 @@ layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, H+ewt)
 
 all_layer_Hl = layer_dry.Hl() + layer_wet.Hl()
 
-print(layer_dry.theta(), layer_wet.theta())
+
 # Shoelace formula
 # https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
 def PolyArea(x,y):
@@ -400,7 +400,7 @@ fail_slope = np.tan(np.radians(phi))
 # Slope of conjugate line
 conj_slope = np.tan(np.radians(beta) + example.theta())
 
-mohr_line_data = ColumnDataSource(data=dict(
+mohr_line_data_old = ColumnDataSource(data=dict(
                 x_fail = [0, 1.5*example.Ja(H)],
                 y_fail = [c, c + (np.tan(np.radians(phi))*1.5*example.Ja(H))],
                 x_conj = [0, 1.9*example.Ja(H)],
@@ -410,7 +410,7 @@ mohr_line_data = ColumnDataSource(data=dict(
             )
 
 
-mohr_circle_data = ColumnDataSource(data=dict(
+mohr_circle_data_old = ColumnDataSource(data=dict(
                 y = [0],
                 center = [example.Ja(H)],
                 # Circle radius from equation 11
@@ -420,7 +420,7 @@ mohr_circle_data = ColumnDataSource(data=dict(
             )
 
 
-mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
+mohr_plot_old = figure(x_axis_label="\u03C3' (kPa)",
                    y_axis_label='\u03C4 (kPa)',
                    plot_width=400,
                    plot_height=400,
@@ -430,14 +430,220 @@ mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
                    background_fill_alpha=0.1)
 
 
-fail_line = mohr_plot.line(
+fail_line_old = mohr_plot_old.line(
+                x='x_fail',
+                y='y_fail',
+                source=mohr_line_data_old,
+                line_width=2,
+                legend='Effective stress M-C failure envelope')
+
+conj_line_old = mohr_plot_old.line(
+                x='x_conj',
+                y='y_conj',
+                source=mohr_line_data_old,
+                line_width=3,
+                color='orange',
+                legend='Conjugate stress line')
+
+mohr_plot_old.circle(x='center',
+                 y='y',
+                 radius='radius',
+                 fill_color=None,
+                 line_width=2,
+                 color='black',
+                 source=mohr_circle_data_old)
+
+
+# Calculate intersection points for effective stress envelope
+x_line_inter_old, y_line_inter_old = line_circle_intersect(
+                                h=mohr_circle_data_old.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data_old.data['radius'][0],
+                                angle=phi,
+                                c=c)
+
+# Calculate intersection points for conjugate stress line
+x_conj_inter_old, y_conj_inter_old = line_circle_intersect(
+                                h=mohr_circle_data_old.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data_old.data['radius'][0],
+                                angle=beta+np.degrees(example.theta()),
+                                c=0)
+
+# Calculate intersection points at zero (sigma1, sigma3)
+x_sigma_inter_old, y_sigma_inter_old = line_circle_intersect(
+                                h=mohr_circle_data_old.data['center'][0],
+                                k=0,
+                                r=mohr_circle_data_old.data['radius'][0],
+                                angle=0,
+                                c=0)
+
+
+# Store data in a ColumnDataSource
+intersect_data_old = ColumnDataSource(data=dict(
+                x_line_inter = x_line_inter_old,
+                y_line_inter = y_line_inter_old,
+                x_conj_inter = x_conj_inter_old,
+                y_conj_inter = y_conj_inter_old,
+                x_sigma_inter = x_sigma_inter_old,
+                y_sigma_inter = y_sigma_inter_old
+                )
+            )
+
+# Plot intersection points for effective stress envelope
+# mohr_plot_old.circle(x='x_line_inter',
+#                  y='y_line_inter',
+#                  line_color='#1F77B4',
+#                  line_width=2,
+#                  fill_color='white',
+#                  size=7,
+#                  source=intersect_data)
+
+# Plot intersection points for conjugate stress line
+mohr_plot_old.circle(x='x_conj_inter',
+                 y='y_conj_inter',
+                 line_color='orange',
+                 line_width=2,
+                 fill_color='white',
+                 size=7,
+                 source=intersect_data_old)
+
+# Plot intersection points at zero (sigma1, sigma3)
+# mohr_plot_old.circle(x='x_sigma_inter',
+#                  y='y_sigma_inter',
+#                  line_color='black',
+#                  line_width=2,
+#                  fill_color='white',
+#                  size=5,
+#                  source=intersect_data)
+
+
+# arc_data = ColumnDataSource(data=dict(
+#                 x_phi = [-c/np.radians(phi)],
+#                 y_phi = [0],
+#                 phi_radius = [0.15 * 2.0 * example.Ja(H)],
+#                 phi_end_angle = [np.radians(phi)],
+#                 x_beta = [0],
+#                 y_beta = [0],
+#                 beta_radius = [0.16 * 2.0 * example.Ja(H)],
+#                 beta_end_angle = [np.radians(beta)+example.theta()]
+#                 )
+#             )
+#
+# mohr_plot_old.arc(x='x_phi',
+#               y='y_phi',
+#               radius='phi_radius',
+#               start_angle=0,
+#               end_angle='phi_end_angle',
+#               line_width=2,
+#               color="#1F77B4",
+#               source=arc_data)
+#
+# mohr_plot_old.arc(x='x_beta',
+#               y='y_beta',
+#               radius='beta_radius',
+#               start_angle=0,
+#               end_angle='beta_end_angle',
+#               line_width=2,
+#               color="orange",
+#               source=arc_data)
+
+
+mohr_bold_label_data_old = ColumnDataSource(data=dict(
+                        x=[70,77.8,66,70,70],
+                        y=[300-i*17 for i in range(5)],
+                        names=['Zw: {:.1f} m'.format(H),
+                               '\u03D5: {:.0f}\u1d52'.format(phi),
+                               '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
+                                            np.degrees(example.theta())),
+                               "\u03C3'\u03B2: {:.0f} kPa".format(
+                                    intersect_data_old.data['x_conj_inter'][1]),
+                               "\u03C3'\u03B8: {:.0f} kPa".format(
+                                    intersect_data_old.data['x_conj_inter'][0]),
+                               ]))
+
+mohr_bold_labels_old = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       source=mohr_bold_label_data_old)
+mohr_plot_old.add_layout(mohr_bold_labels_old)
+
+
+mohr_sigma_label_data_old = ColumnDataSource(data=dict(
+                        x=intersect_data_old.data['x_conj_inter'],
+                        y=intersect_data_old.data['y_conj_inter'],
+                        names=["\u03C3'\u03B8",
+                               "\u03C3'\u03B2",
+                               ]))
+
+mohr_sigma_labels_old = LabelSet(x='x',
+                       y='y',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       background_fill_alpha=0.6,
+                       x_offset=8,
+                       #y_offset=5,
+                       source=mohr_sigma_label_data_old)
+mohr_plot_old.add_layout(mohr_sigma_labels_old)
+
+mohr_plot_old.legend.location = "top_left"
+
+
+
+# Everything for Mohr ONLY works for c=0
+if c == 0:
+    circle_center = (layer_dry.Ja(min(H,abs(ewt)))
+                    + layer_wet.Ja(max(0,H+ewt)))
+else:
+    circle_center = layer_dry.Ja(min(H,abs(ewt)))
+
+mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
+                   y_axis_label='\u03C4 (kPa)',
+                   plot_width=400,
+                   plot_height=400,
+                   toolbar_location=None,
+                   x_range=(0, 2.0 * circle_center),
+                   y_range=(0, 2.03 * circle_center),
+                   background_fill_alpha=0.1)
+
+
+mohr_line_data = ColumnDataSource(data=dict(
+                x_fail = [0, 1.5*circle_center],
+                y_fail = [c, c + (np.tan(np.radians(phi))*1.5*circle_center)],
+                x_conj = [0, 1.9*circle_center],
+                y_conj = [0, (np.tan(np.radians(beta) + layer_dry.theta())
+                             ) * 1.9 * circle_center],
+                ))
+
+
+mohr_circle_data = ColumnDataSource(data=dict(
+                y = [0],
+                center = [circle_center],
+                # Circle radius from equation 11
+                radius = [(c * (1/np.tan(np.radians(phi)))
+                           + circle_center) * np.sin(np.radians(phi))],
+                ))
+
+
+mohr_plot.line(
                 x='x_fail',
                 y='y_fail',
                 source=mohr_line_data,
                 line_width=2,
                 legend='Effective stress M-C failure envelope')
 
-conj_line = mohr_plot.line(
+mohr_plot.line(
                 x='x_conj',
                 y='y_conj',
                 source=mohr_line_data,
@@ -467,39 +673,17 @@ x_conj_inter, y_conj_inter = line_circle_intersect(
                                 h=mohr_circle_data.data['center'][0],
                                 k=0,
                                 r=mohr_circle_data.data['radius'][0],
-                                angle=beta+np.degrees(example.theta()),
+                                angle=beta+np.degrees(layer_dry.theta()),
                                 c=0)
-
-# Calculate intersection points at zero (sigma1, sigma3)
-x_sigma_inter, y_sigma_inter = line_circle_intersect(
-                                h=mohr_circle_data.data['center'][0],
-                                k=0,
-                                r=mohr_circle_data.data['radius'][0],
-                                angle=0,
-                                c=0)
-
 
 # Store data in a ColumnDataSource
 intersect_data = ColumnDataSource(data=dict(
                 x_line_inter = x_line_inter,
                 y_line_inter = y_line_inter,
                 x_conj_inter = x_conj_inter,
-                y_conj_inter = y_conj_inter,
-                x_sigma_inter = x_sigma_inter,
-                y_sigma_inter = y_sigma_inter
-                )
-            )
+                y_conj_inter = y_conj_inter
+                ))
 
-# Plot intersection points for effective stress envelope
-# mohr_plot.circle(x='x_line_inter',
-#                  y='y_line_inter',
-#                  line_color='#1F77B4',
-#                  line_width=2,
-#                  fill_color='white',
-#                  size=7,
-#                  source=intersect_data)
-
-# Plot intersection points for conjugate stress line
 mohr_plot.circle(x='x_conj_inter',
                  y='y_conj_inter',
                  line_color='orange',
@@ -508,54 +692,13 @@ mohr_plot.circle(x='x_conj_inter',
                  size=7,
                  source=intersect_data)
 
-# Plot intersection points at zero (sigma1, sigma3)
-# mohr_plot.circle(x='x_sigma_inter',
-#                  y='y_sigma_inter',
-#                  line_color='black',
-#                  line_width=2,
-#                  fill_color='white',
-#                  size=5,
-#                  source=intersect_data)
-
-
-# arc_data = ColumnDataSource(data=dict(
-#                 x_phi = [-c/np.radians(phi)],
-#                 y_phi = [0],
-#                 phi_radius = [0.15 * 2.0 * example.Ja(H)],
-#                 phi_end_angle = [np.radians(phi)],
-#                 x_beta = [0],
-#                 y_beta = [0],
-#                 beta_radius = [0.16 * 2.0 * example.Ja(H)],
-#                 beta_end_angle = [np.radians(beta)+example.theta()]
-#                 )
-#             )
-#
-# mohr_plot.arc(x='x_phi',
-#               y='y_phi',
-#               radius='phi_radius',
-#               start_angle=0,
-#               end_angle='phi_end_angle',
-#               line_width=2,
-#               color="#1F77B4",
-#               source=arc_data)
-#
-# mohr_plot.arc(x='x_beta',
-#               y='y_beta',
-#               radius='beta_radius',
-#               start_angle=0,
-#               end_angle='beta_end_angle',
-#               line_width=2,
-#               color="orange",
-#               source=arc_data)
-
-
 mohr_bold_label_data = ColumnDataSource(data=dict(
                         x=[70,77.8,66,70,70],
                         y=[300-i*17 for i in range(5)],
                         names=['Zw: {:.1f} m'.format(H),
                                '\u03D5: {:.0f}\u1d52'.format(phi),
                                '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
-                                            np.degrees(example.theta())),
+                                            np.degrees(layer_dry.theta())),
                                "\u03C3'\u03B2: {:.0f} kPa".format(
                                     intersect_data.data['x_conj_inter'][1]),
                                "\u03C3'\u03B8: {:.0f} kPa".format(
@@ -574,7 +717,6 @@ mohr_bold_labels = LabelSet(x='x',
                        background_fill_color='white',
                        source=mohr_bold_label_data)
 mohr_plot.add_layout(mohr_bold_labels)
-
 
 mohr_sigma_label_data = ColumnDataSource(data=dict(
                         x=intersect_data.data['x_conj_inter'],
@@ -602,61 +744,22 @@ mohr_plot.legend.location = "top_left"
 
 
 
-circle_center = layer_dry.Ja(min(H,abs(ewt))) + layer_wet.Ja(max(0,H+ewt))
-
-mohr_plot2 = figure(x_axis_label="\u03C3' (kPa)",
-                   y_axis_label='\u03C4 (kPa)',
-                   plot_width=400,
-                   plot_height=400,
-                   toolbar_location=None,
-                   x_range=(0, 2.0 * circle_center),
-                   y_range=(0, 2.03 * circle_center),
-                   background_fill_alpha=0.1)
-
-
-mohr2_circle_data = ColumnDataSource(data=dict(
-                y = [0],
-                center = [circle_center],
-                # Circle radius from equation 11
-                radius = [(c * (1/np.tan(np.radians(phi)))
-                           + circle_center) * np.sin(np.radians(phi))],
-                )
-            )
-
-
-mohr_plot2.circle(x='center',
-                 y='y',
-                 radius='radius',
-                 fill_color=None,
-                 line_width=2,
-                 color='black',
-                 source=mohr2_circle_data)
-
-
-
-
-
-
-
-
-
-
 ##############################################################################
 ###                                 TABLE                                  ###
 ##############################################################################
 
 
 ### Tabulating data
-zwi=[0.0001,(example.H/5),2*(example.H/5),3*(example.H/5),4*(example.H/5),(example.H)]
-source_table = ColumnDataSource(data=dict(
-                    zw  = zwi,
-                    zl  = [example.zl(i) for i in zwi],
-                    z   = [example.z(i) for i in zwi],
-                    Ja  = [example.Ja(i) for i in zwi],
-                    a_a = [example.alpha_a(i, degrees=True) for i in zwi],
-                    Ka  = [example.Ka(i) for i in zwi],
-                    s_a = [example.sigma_a(i) for i in zwi],
-                    s_AEH=[example.sigma_AEH(i) for i in zwi]
+zwi_old=[0.0001,(example.H/5),2*(example.H/5),3*(example.H/5),4*(example.H/5),(example.H)]
+source_table_old = ColumnDataSource(data=dict(
+                    zw  = zwi_old,
+                    zl  = [example.zl(i) for i in zwi_old],
+                    z   = [example.z(i) for i in zwi_old],
+                    Ja  = [example.Ja(i) for i in zwi_old],
+                    a_a = [example.alpha_a(i, degrees=True) for i in zwi_old],
+                    Ka  = [example.Ka(i) for i in zwi_old],
+                    s_a = [example.sigma_a(i) for i in zwi_old],
+                    s_AEH=[example.sigma_AEH(i) for i in zwi_old]
 ))
 
 columns = [
@@ -686,11 +789,126 @@ columns = [
                     formatter=models.NumberFormatter(format='0.000'))
 ]
 
-data_table = DataTable(source=source_table,
+data_table_old = DataTable(source=source_table_old,
                        columns=columns,
                        width=1050,
                        height=200)
 
+
+
+total_H = layer_dry.H + layer_wet.H
+
+if (H + ewt > 0) and (abs(ewt) > 0.1):
+    zwi=[0.0001,
+         layer_dry.H/2,
+         layer_dry.H * 0.9999,
+         layer_dry.H + layer_wet.H * 0.0001,
+         layer_dry.H + layer_wet.H/2,
+         total_H]
+
+    source_table = ColumnDataSource(data=dict(
+                        zw  = zwi,
+                        zl  = [layer_dry.zl(0.0001),
+                               layer_dry.zl(layer_dry.H/2),
+                               layer_dry.zl(layer_dry.H * 0.9999),
+                               (layer_dry.zl(layer_dry.H)
+                                + layer_wet.zl(layer_wet.H * 0.0001)),
+                               (layer_dry.zl(layer_dry.H)
+                                + layer_wet.zl(layer_wet.H/2)),
+                               (layer_dry.zl(layer_dry.H)
+                                + layer_wet.zl(layer_wet.H))],
+                        z   = [layer_dry.z(0.0001),
+                               layer_dry.z(layer_dry.H/2),
+                               layer_dry.z(layer_dry.H * 0.9999),
+                               (layer_dry.z(layer_dry.H)
+                                + layer_wet.z(layer_wet.H * 0.0001)),
+                               (layer_dry.z(layer_dry.H)
+                                + layer_wet.z(layer_wet.H/2)),
+                               (layer_dry.z(layer_dry.H)
+                                + layer_wet.z(layer_wet.H))],
+                        Ja  = [layer_dry.Ja(0.000001),
+                               layer_dry.Ja(layer_dry.H/2),
+                               layer_dry.Ja(layer_dry.H * 0.9999),
+                               (layer_dry.Ja(layer_dry.H)
+                                + layer_wet.Ja(layer_wet.H * 0.0001)),
+                               (layer_dry.Ja(layer_dry.H)
+                                + layer_wet.Ja(layer_wet.H/2)),
+                               (layer_dry.Ja(layer_dry.H)
+                                + layer_wet.Ja(layer_wet.H))],
+                        a_a = [layer_dry.alpha_a(0.0001, degrees=True),
+                               layer_dry.alpha_a(layer_dry.H/2, degrees=True),
+                               layer_dry.alpha_a(layer_dry.H * 0.9999, degrees=True),
+                               layer_wet.alpha_a(layer_wet.H * 0.0001, degrees=True),
+                               layer_wet.alpha_a(layer_wet.H/2, degrees=True),
+                               layer_wet.alpha_a(layer_wet.H, degrees=True)],
+                        Ka  = [layer_dry.Ka(0.0001),
+                               layer_dry.Ka(layer_dry.H/2),
+                               layer_dry.Ka(layer_dry.H * 0.9999),
+                               layer_wet.Ka(layer_wet.H * 0.0001),
+                               layer_wet.Ka(layer_wet.H/2),
+                               layer_wet.Ka(layer_wet.H)],
+                        s_a = [layer_dry.sigma_a(0.000001),
+                               layer_dry.sigma_a(layer_dry.H/2),
+                               layer_dry.sigma_a(layer_dry.H * 0.9999),
+                               (layer_dry.sigma_a(layer_dry.H)
+                                + layer_wet.sigma_a(layer_wet.H * 0.0001)),
+                               (layer_dry.sigma_a(layer_dry.H)
+                                + layer_wet.sigma_a(layer_wet.H/2)),
+                               (layer_dry.sigma_a(layer_dry.H)
+                                + layer_wet.sigma_a(layer_wet.H))],
+                        s_AEH=[layer_dry.sigma_AEH(0.000001),
+                               layer_dry.sigma_AEH(layer_dry.H/2),
+                               layer_dry.sigma_AEH(layer_dry.H * 0.9999),
+                               (layer_dry.sigma_AEH(layer_dry.H)
+                                + layer_wet.sigma_AEH(layer_wet.H * 0.0001)),
+                               (layer_dry.sigma_AEH(layer_dry.H)
+                                + layer_wet.sigma_AEH(layer_wet.H/2)),
+                               (layer_dry.sigma_AEH(layer_dry.H)
+                                + layer_wet.sigma_AEH(layer_wet.H))]
+    ))
+
+elif abs(ewt) <= 0.1:
+    zwi=[0.0001,
+         total_H/5,
+         2*(total_H/5),
+         3*(total_H/5),
+         4*(total_H/5),
+         total_H]
+
+    source_table = ColumnDataSource(data=dict(
+                        zw  = zwi,
+                        zl  = [layer_wet.zl(i) for i in zwi],
+                        z   = [layer_wet.z(i) for i in zwi],
+                        Ja  = [layer_wet.Ja(i) for i in zwi],
+                        a_a = [layer_wet.alpha_a(i, degrees=True) for i in zwi],
+                        Ka  = [layer_wet.Ka(i) for i in zwi],
+                        s_a = [layer_wet.sigma_a(i) for i in zwi],
+                        s_AEH=[layer_wet.sigma_AEH(i) for i in zwi]
+    ))
+
+else:
+    zwi=[0.0001,
+         total_H/5,
+         2*(total_H/5),
+         3*(total_H/5),
+         4*(total_H/5),
+         total_H]
+
+    source_table = ColumnDataSource(data=dict(
+                        zw  = zwi,
+                        zl  = [layer_dry.zl(i) for i in zwi],
+                        z   = [layer_dry.z(i) for i in zwi],
+                        Ja  = [layer_dry.Ja(i) for i in zwi],
+                        a_a = [layer_dry.alpha_a(i, degrees=True) for i in zwi],
+                        Ka  = [layer_dry.Ka(i) for i in zwi],
+                        s_a = [layer_dry.sigma_a(i) for i in zwi],
+                        s_AEH=[layer_dry.sigma_AEH(i) for i in zwi]
+    ))
+
+data_table = DataTable(source=source_table,
+                       columns=columns,
+                       width=1050,
+                       height=200)
 
 
 ##############################################################################
@@ -758,8 +976,8 @@ def update_plot(attr, old, new):
     new_layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, max(0,H+ewt))
     new_all_layer_Hl = new_layer_dry.Hl() + new_layer_wet.Hl()
 
-    mohr_plot.x_range.end = 2.0 * new_example.Ja(H)
-    mohr_plot.y_range.end = 2.03 * new_example.Ja(H)
+    mohr_plot_old.x_range.end = 2.0 * new_example.Ja(H)
+    mohr_plot_old.y_range.end = 2.03 * new_example.Ja(H)
 
     # Old
     new_sigma_y = np.arange(0.0001, new_example.Hl(), 0.1)
@@ -788,7 +1006,7 @@ def update_plot(attr, old, new):
     source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
     sigma_data.data=dict(x=new_x_sigma_all, y=new_y_sigma_all)
     new_force = PolyArea(new_x_sigma_all,new_y_sigma_all) * np.cos(np.radians(omega))
-    print(new_force)
+
     plot_sigma.y_range.start=0.99*new_example.Hl()
     plot_sigma.y_range.end=(new_example.Hl()-30)
 
@@ -810,11 +1028,11 @@ def update_plot(attr, old, new):
                                    'EWT: {:.1f} m'.format(ewt),
                                    '\u03C6: {:.0f}\u1d52'.format(phi),
                                    'c: {:.0f} kPa'.format(c),
-                                   '\u03B3: {:.0f}\u1d52'.format(gamma)])
+                                   '\u03B3: {:.0f} kPa'.format(gamma)])
 
 
     # Update Mohr circle
-    mohr_line_data.data = dict(
+    mohr_line_data_old.data = dict(
         x_fail = [0, 1.5*new_example.Ja(H)],
         y_fail = [c, c + (np.tan(np.radians(phi))*1.5*new_example.Ja(H))],
         x_conj = [0, 1.9*new_example.Ja(H)],
@@ -822,7 +1040,7 @@ def update_plot(attr, old, new):
                      ) * 1.9 * new_example.Ja(H)],
         )
 
-    mohr_circle_data.data = dict(
+    mohr_circle_data_old.data = dict(
         y = [0],
         center = [new_example.Ja(H)],
         # Circle radius from equation 11
@@ -830,15 +1048,72 @@ def update_plot(attr, old, new):
                    + new_example.Ja(H)) * np.sin(np.radians(phi))],
         )
 
-    #mohr_depth.text="Depth (Zw): {:.1f} m".format(H)
+    if c == 0:
+        circle_center = (new_layer_dry.Ja(min(H,abs(ewt)))
+                        + new_layer_wet.Ja(max(0,H+ewt)))
+    else:
+        circle_center = new_layer_dry.Ja(min(H,abs(ewt)))
+
+    mohr_plot.x_range.end = 2.0 * circle_center
+    mohr_plot.y_range.end = 2.03 * circle_center
+
+    mohr_line_data.data=dict(
+                    x_fail = [0, 1.5*circle_center],
+                    y_fail = [c, c + (np.tan(np.radians(phi))*1.5*circle_center)],
+                    x_conj = [0, 1.9*circle_center],
+                    y_conj = [0, (np.tan(np.radians(beta) + new_layer_dry.theta())
+                                 ) * 1.9 * circle_center],
+                    )
+
+    mohr_circle_data.data=dict(
+                    y = [0],
+                    center = [circle_center],
+                    # Circle radius from equation 11
+                    radius = [(c * (1/np.tan(np.radians(phi)))
+                               + circle_center) * np.sin(np.radians(phi))],
+                    )
+
+    # Calculate intersection points for effective stress envelope
+    x_line_inter_old, y_line_inter_old = line_circle_intersect(
+                                    h=mohr_circle_data_old.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data_old.data['radius'][0]*1.0000001,
+                                    angle=phi,
+                                    c=c)
+
+    # Calculate intersection points for conjugate stress line
+    x_conj_inter_old, y_conj_inter_old = line_circle_intersect(
+                                    h=mohr_circle_data_old.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data_old.data['radius'][0],
+                                    angle=beta+np.degrees(new_example.theta()),
+                                    c=0)
+
+    # Calculate intersection points at zero (sigma1, sigma3)
+    x_sigma_inter_old, y_sigma_inter_old = line_circle_intersect(
+                                    h=mohr_circle_data_old.data['center'][0],
+                                    k=0,
+                                    r=mohr_circle_data_old.data['radius'][0],
+                                    angle=0,
+                                    c=0)
+
+    # Store data in a ColumnDataSource
+    intersect_data_old.data=dict(
+                    x_line_inter = x_line_inter_old,
+                    y_line_inter = y_line_inter_old,
+                    x_conj_inter = x_conj_inter_old,
+                    y_conj_inter = y_conj_inter_old,
+                    x_sigma_inter = x_sigma_inter_old,
+                    y_sigma_inter = y_sigma_inter_old
+                    )
 
 
-
+    # NEW
     # Calculate intersection points for effective stress envelope
     x_line_inter, y_line_inter = line_circle_intersect(
                                     h=mohr_circle_data.data['center'][0],
                                     k=0,
-                                    r=mohr_circle_data.data['radius'][0]*1.0000001,
+                                    r=mohr_circle_data.data['radius'][0],
                                     angle=phi,
                                     c=c)
 
@@ -847,40 +1122,20 @@ def update_plot(attr, old, new):
                                     h=mohr_circle_data.data['center'][0],
                                     k=0,
                                     r=mohr_circle_data.data['radius'][0],
-                                    angle=beta+np.degrees(new_example.theta()),
+                                    angle=beta+np.degrees(new_layer_dry.theta()),
                                     c=0)
-
-    # Calculate intersection points at zero (sigma1, sigma3)
-    x_sigma_inter, y_sigma_inter = line_circle_intersect(
-                                    h=mohr_circle_data.data['center'][0],
-                                    k=0,
-                                    r=mohr_circle_data.data['radius'][0],
-                                    angle=0,
-                                    c=0)
-
 
     # Store data in a ColumnDataSource
     intersect_data.data=dict(
                     x_line_inter = x_line_inter,
                     y_line_inter = y_line_inter,
                     x_conj_inter = x_conj_inter,
-                    y_conj_inter = y_conj_inter,
-                    x_sigma_inter = x_sigma_inter,
-                    y_sigma_inter = y_sigma_inter
+                    y_conj_inter = y_conj_inter
                     )
 
-    # arc_data.data=dict(
-    #                 x_phi = [-c/np.radians(phi)],
-    #                 y_phi = [0],
-    #                 phi_radius = [0.15 * 2.0 * new_example.Ja(H)],
-    #                 phi_end_angle = [np.radians(phi)],
-    #                 x_beta = [0],
-    #                 y_beta = [0],
-    #                 beta_radius = [0.16 * 2.0 * new_example.Ja(H)],
-    #                 beta_end_angle = [np.radians(beta)+new_example.theta()]
-    #                 )
 
-    mohr_bold_label_data.data=dict(
+
+    mohr_bold_label_data_old.data=dict(
                             x=[70,77.8,66,70,70],
                             y=[300-i*17 for i in range(5)],
                             names=['Zw: {:.1f} m'.format(H),
@@ -888,10 +1143,33 @@ def update_plot(attr, old, new):
                                    '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
                                                 np.degrees(new_example.theta())),
                                    "\u03C3'\u03B2: {:.0f} kPa".format(
+                                        intersect_data_old.data['x_conj_inter'][1]),
+                                   "\u03C3'\u03B8: {:.0f} kPa".format(
+                                        intersect_data_old.data['x_conj_inter'][0]),
+                                   ])
+
+
+    mohr_bold_label_data.data=dict(
+                            x=[70,77.8,66,70,70],
+                            y=[300-i*17 for i in range(5)],
+                            names=['Zw: {:.1f} m'.format(H),
+                                   '\u03D5: {:.0f}\u1d52'.format(phi),
+                                   '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
+                                                np.degrees(new_layer_dry.theta())),
+                                   "\u03C3'\u03B2: {:.0f} kPa".format(
                                         intersect_data.data['x_conj_inter'][1]),
                                    "\u03C3'\u03B8: {:.0f} kPa".format(
                                         intersect_data.data['x_conj_inter'][0]),
                                    ])
+
+
+    mohr_sigma_label_data_old.data=dict(
+                            x=intersect_data_old.data['x_conj_inter'],
+                            y=intersect_data_old.data['y_conj_inter'],
+                            names=["\u03C3'\u03B8",
+                                   "\u03C3'\u03B2",
+                                   ])
+
 
     mohr_sigma_label_data.data=dict(
                             x=intersect_data.data['x_conj_inter'],
@@ -899,6 +1177,9 @@ def update_plot(attr, old, new):
                             names=["\u03C3'\u03B8",
                                    "\u03C3'\u03B2",
                                    ])
+
+
+
 
 
     ### IF clause for beta + theta < phi
@@ -912,6 +1193,7 @@ def update_plot(attr, old, new):
         # h_load1.visible = False
         error.visible = True
         sigma_error.visible = True
+        mohr_plot_old.background_fill_color = 'red'
         mohr_plot.background_fill_color = 'red'
 
     else:
@@ -922,6 +1204,7 @@ def update_plot(attr, old, new):
         # h_load1.visible = True
         error.visible = False
         sigma_error.visible = False
+        mohr_plot_old.background_fill_color = None
         mohr_plot.background_fill_color = None
 
 
@@ -935,18 +1218,132 @@ def update_plot(attr, old, new):
 
 
     ### Update tabulated data
-    new_zwi=[0.0001,(new_example.H/5),2*(new_example.H/5),3*(new_example.H/5), \
-             4*(new_example.H/5),(new_example.H)]
-    source_table.data = dict(
-            zw=new_zwi,
-            zl=[new_example.zl(i) for i in new_zwi],
-            z=[new_example.z(i) for i in new_zwi],
-            Ja=[new_example.Ja(i) for i in new_zwi],
-            a_a=[new_example.alpha_a(i, degrees=True) for i in new_zwi],
-            Ka=[new_example.Ka(i) for i in new_zwi],
-            s_a=[new_example.sigma_a(i) for i in new_zwi],
-            s_AEH=[new_example.sigma_AEH(i) for i in new_zwi]
-    )
+    # new_zwi=[0.0001,(new_example.H/5),2*(new_example.H/5),3*(new_example.H/5), \
+    #          4*(new_example.H/5),(new_example.H)]
+    # source_table.data = dict(
+    #         zw=new_zwi,
+    #         zl=[new_example.zl(i) for i in new_zwi],
+    #         z=[new_example.z(i) for i in new_zwi],
+    #         Ja=[new_example.Ja(i) for i in new_zwi],
+    #         a_a=[new_example.alpha_a(i, degrees=True) for i in new_zwi],
+    #         Ka=[new_example.Ka(i) for i in new_zwi],
+    #         s_a=[new_example.sigma_a(i) for i in new_zwi],
+    #         s_AEH=[new_example.sigma_AEH(i) for i in new_zwi]
+    # )
+
+
+
+    total_H = new_layer_dry.H + new_layer_wet.H
+
+    if (H + ewt > 0) and (abs(ewt) > 0.1):
+        zwi=[0.0001,
+             new_layer_dry.H/2,
+             new_layer_dry.H * 0.9999,
+             new_layer_dry.H + new_layer_wet.H * 0.0001,
+             new_layer_dry.H + new_layer_wet.H/2,
+             total_H]
+
+        source_table.data=dict(
+                            zw  = zwi,
+                            zl  = [new_layer_dry.zl(0.0001),
+                                   new_layer_dry.zl(new_layer_dry.H/2),
+                                   new_layer_dry.zl(new_layer_dry.H * 0.9999),
+                                   (new_layer_dry.zl(new_layer_dry.H)
+                                    + new_layer_wet.zl(new_layer_wet.H * 0.0001)),
+                                   (new_layer_dry.zl(new_layer_dry.H)
+                                    + new_layer_wet.zl(new_layer_wet.H/2)),
+                                   (new_layer_dry.zl(new_layer_dry.H)
+                                    + new_layer_wet.zl(new_layer_wet.H))],
+                            z   = [new_layer_dry.z(0.0001),
+                                   new_layer_dry.z(new_layer_dry.H/2),
+                                   new_layer_dry.z(new_layer_dry.H * 0.9999),
+                                   (new_layer_dry.z(new_layer_dry.H)
+                                    + new_layer_wet.z(new_layer_wet.H * 0.0001)),
+                                   (new_layer_dry.z(new_layer_dry.H)
+                                    + new_layer_wet.z(new_layer_wet.H/2)),
+                                   (new_layer_dry.z(new_layer_dry.H)
+                                    + new_layer_wet.z(new_layer_wet.H))],
+                            Ja  = [new_layer_dry.Ja(0.000001),
+                                   new_layer_dry.Ja(new_layer_dry.H/2),
+                                   new_layer_dry.Ja(new_layer_dry.H * 0.9999),
+                                   (new_layer_dry.Ja(new_layer_dry.H)
+                                    + new_layer_wet.Ja(new_layer_wet.H * 0.0001)),
+                                   (new_layer_dry.Ja(new_layer_dry.H)
+                                    + new_layer_wet.Ja(new_layer_wet.H/2)),
+                                   (new_layer_dry.Ja(new_layer_dry.H)
+                                    + new_layer_wet.Ja(layer_wet.H))],
+                            a_a = [new_layer_dry.alpha_a(0.0001, degrees=True),
+                                   new_layer_dry.alpha_a(new_layer_dry.H/2, degrees=True),
+                                   new_layer_dry.alpha_a(new_layer_dry.H * 0.9999, degrees=True),
+                                   new_layer_wet.alpha_a(new_layer_wet.H * 0.0001, degrees=True),
+                                   new_layer_wet.alpha_a(new_layer_wet.H/2, degrees=True),
+                                   new_layer_wet.alpha_a(new_layer_wet.H, degrees=True)],
+                            Ka  = [new_layer_dry.Ka(0.0001),
+                                   new_layer_dry.Ka(new_layer_dry.H/2),
+                                   new_layer_dry.Ka(new_layer_dry.H * 0.9999),
+                                   new_layer_wet.Ka(new_layer_wet.H * 0.0001),
+                                   new_layer_wet.Ka(new_layer_wet.H/2),
+                                   new_layer_wet.Ka(new_layer_wet.H)],
+                            s_a = [new_layer_dry.sigma_a(0.000001),
+                                   new_layer_dry.sigma_a(new_layer_dry.H/2),
+                                   new_layer_dry.sigma_a(new_layer_dry.H * 0.9999),
+                                   (new_layer_dry.sigma_a(new_layer_dry.H)
+                                    + new_layer_wet.sigma_a(new_layer_wet.H * 0.0001)),
+                                   (new_layer_dry.sigma_a(new_layer_dry.H)
+                                    + new_layer_wet.sigma_a(new_layer_wet.H/2)),
+                                   (new_layer_dry.sigma_a(new_layer_dry.H)
+                                    + new_layer_wet.sigma_a(new_layer_wet.H))],
+                            s_AEH=[new_layer_dry.sigma_AEH(0.000001),
+                                   new_layer_dry.sigma_AEH(new_layer_dry.H/2),
+                                   new_layer_dry.sigma_AEH(new_layer_dry.H * 0.9999),
+                                   (new_layer_dry.sigma_AEH(new_layer_dry.H)
+                                    + new_layer_wet.sigma_AEH(new_layer_wet.H * 0.0001)),
+                                   (new_layer_dry.sigma_AEH(new_layer_dry.H)
+                                    + new_layer_wet.sigma_AEH(new_layer_wet.H/2)),
+                                   (new_layer_dry.sigma_AEH(new_layer_dry.H)
+                                    + new_layer_wet.sigma_AEH(new_layer_wet.H))]
+        )
+
+    elif abs(ewt) <= 0.1:
+        zwi=[0.0001,
+             total_H/5,
+             2*(total_H/5),
+             3*(total_H/5),
+             4*(total_H/5),
+             total_H]
+
+        source_table.data=dict(
+                            zw  = zwi,
+                            zl  = [new_layer_wet.zl(i) for i in zwi],
+                            z   = [new_layer_wet.z(i) for i in zwi],
+                            Ja  = [new_layer_wet.Ja(i) for i in zwi],
+                            a_a = [new_layer_wet.alpha_a(i, degrees=True) for i in zwi],
+                            Ka  = [new_layer_wet.Ka(i) for i in zwi],
+                            s_a = [new_layer_wet.sigma_a(i) for i in zwi],
+                            s_AEH=[new_layer_wet.sigma_AEH(i) for i in zwi]
+        )
+
+    else:
+        zwi=[0.0001,
+             total_H/5,
+             2*(total_H/5),
+             3*(total_H/5),
+             4*(total_H/5),
+             total_H]
+
+        source_table.data=dict(
+                            zw  = zwi,
+                            zl  = [new_layer_dry.zl(i) for i in zwi],
+                            z   = [new_layer_dry.z(i) for i in zwi],
+                            Ja  = [new_layer_dry.Ja(i) for i in zwi],
+                            a_a = [new_layer_dry.alpha_a(i, degrees=True) for i in zwi],
+                            Ka  = [new_layer_dry.Ka(i) for i in zwi],
+                            s_a = [new_layer_dry.sigma_a(i) for i in zwi],
+                            s_AEH=[new_layer_dry.sigma_AEH(i) for i in zwi]
+        )
+
+
+
 
     ### Update arrow data
     source_arrow1.data = {
@@ -998,7 +1395,7 @@ def update_mohr_zw(attr, old, new):
     new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
 
     # Update Mohr circle
-    mohr_line_data.data = dict(
+    mohr_line_data_old.data = dict(
         x_fail = [0, 1.5*new_example.Ja(zwd)],
         y_fail = [c, c + (np.tan(np.radians(phi))*1.5*new_example.Ja(zwd))],
         x_conj = [0, 1.7*new_example.Ja(zwd)],
@@ -1006,7 +1403,7 @@ def update_mohr_zw(attr, old, new):
                      ) * 1.7 * new_example.Ja(zwd)],
         )
 
-    mohr_circle_data.data = dict(
+    mohr_circle_data_old.data = dict(
         y = [0],
         center = [new_example.Ja(zwd)],
         # Circle radius from equation 11
@@ -1017,25 +1414,25 @@ def update_mohr_zw(attr, old, new):
 
     # Calculate intersection points for effective stress envelope
     x_line_inter, y_line_inter = line_circle_intersect(
-                                    h=mohr_circle_data.data['center'][0],
+                                    h=mohr_circle_data_old.data['center'][0],
                                     k=0,
-                                    r=mohr_circle_data.data['radius'][0]*1.0000001,
+                                    r=mohr_circle_data_old.data['radius'][0]*1.0000001,
                                     angle=phi,
                                     c=c)
 
     # Calculate intersection points for conjugate stress line
     x_conj_inter, y_conj_inter = line_circle_intersect(
-                                    h=mohr_circle_data.data['center'][0],
+                                    h=mohr_circle_data_old.data['center'][0],
                                     k=0,
-                                    r=mohr_circle_data.data['radius'][0],
+                                    r=mohr_circle_data_old.data['radius'][0],
                                     angle=beta+np.degrees(new_example.theta()),
                                     c=0)
 
     # Calculate intersection points at zero (sigma1, sigma3)
     x_sigma_inter, y_sigma_inter = line_circle_intersect(
-                                    h=mohr_circle_data.data['center'][0],
+                                    h=mohr_circle_data_old.data['center'][0],
                                     k=0,
-                                    r=mohr_circle_data.data['radius'][0],
+                                    r=mohr_circle_data_old.data['radius'][0],
                                     angle=0,
                                     c=0)
 
@@ -1081,7 +1478,7 @@ def update_mohr_zw(attr, old, new):
         # load1.visible = False
         # h_load1.visible = False
         # error.visible = True
-        mohr_plot.background_fill_color = 'red'
+        mohr_plot_old.background_fill_color = 'red'
 
     else:
         # sigma_plot.fill_alpha = 1
@@ -1090,7 +1487,7 @@ def update_mohr_zw(attr, old, new):
         # load1.visible = True
         # h_load1.visible = True
         # error.visible = False
-        mohr_plot.background_fill_color = None
+        mohr_plot_old.background_fill_color = None
 
 
 # Sliders
@@ -1216,7 +1613,7 @@ page_layout = layout([
                  Div(text="<h4>Zw<br>(m)</h4>", width=70)],
                 [plot, ewt_slider, Spacer(width=20),
                  sigma_figure, Spacer(width=20),
-                 mohr_plot, zw_slider, mohr_plot2],
+                 mohr_plot, zw_slider],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
