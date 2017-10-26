@@ -74,20 +74,19 @@ y_ewt = [yK, yL, yF, yD]
 ###                                LAYERS                                  ###
 ##############################################################################
 
-layer_heights = [abs(ewt), H+ewt]
-
-
 # Calculating values
 example = sep(kh, kv, omega, beta, phi, gamma, c, H)
 
 layer_dry = sep(kh, kv, omega, beta, phi, gamma, c, abs(ewt))
 layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, H+ewt)
 
+all_layer_Hl = layer_dry.Hl() + layer_wet.Hl()
 
+print(layer_dry.theta(), layer_wet.theta())
 # Shoelace formula
 # https://stackoverflow.com/questions/24467972/calculate-area-of-polygon-given-x-y-coordinates
 def PolyArea(x,y):
-    # for this problem, keep only the positive forces
+    # for this problem, keep only the positive stresses
     x_pos = []
     y_pos = []
 
@@ -98,8 +97,9 @@ def PolyArea(x,y):
         else:
             pass
 
-    #return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
-    return 0.5*np.abs(np.dot(x_pos,np.roll(y_pos,1))-np.dot(y_pos,np.roll(x_pos,1)))
+    return 0.5 * np.abs(np.dot(x_pos, np.roll(y_pos, 1))
+                        - np.dot(y_pos, np.roll(x_pos, 1)))
+
 
 
 ##############################################################################
@@ -121,31 +121,21 @@ source_example = ColumnDataSource(data=dict(x=x_sigma, y=y_sigma))
 sigma_y_dry = np.arange(0.0001, layer_dry.Hl(), 0.1)
 sigma_x_dry = layer_dry.sigma_AEH(sigma_y_dry)
 sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
-sigma_x_wet = layer_wet.sigma_AEH(sigma_y_wet) + layer_dry.sigma_AEH(layer_dry.Hl())
-
-# x_sigma_dry = sigma_x_dry.tolist()
-# y_sigma_dry = sigma_y_dry.tolist()
-# x_sigma_dry.extend([0,0])
-# y_sigma_dry.extend([layer_dry.Hl(),0])
-# layer_dry_sigma_data = ColumnDataSource(data=dict(x=x_sigma_dry, y=y_sigma_dry))
-
-# x_sigma_wet = sigma_x_wet.tolist()
-# y_sigma_wet = (sigma_y_wet + layer_dry.Hl()).tolist()
-# x_sigma_wet.extend([0,0])
-# y_sigma_wet.extend([layer_dry.Hl()+layer_wet.Hl(),layer_dry.Hl()])
-# layer_wet_sigma_data = ColumnDataSource(data=dict(x=x_sigma_wet, y=y_sigma_wet))
+sigma_x_wet = (layer_wet.sigma_AEH(sigma_y_wet)
+               + layer_dry.sigma_AEH(layer_dry.Hl()))
 
 x_sigma_all = sigma_x_dry.tolist()
 x_sigma_all.extend(sigma_x_wet.tolist())
-x_sigma_all.extend([0,0])
+x_sigma_all.extend([0, 0])
 y_sigma_all = sigma_y_dry.tolist()
 y_sigma_all.extend((sigma_y_wet + layer_dry.Hl()).tolist())
-y_sigma_all.extend([layer_dry.Hl()+layer_wet.Hl(),0])
-layer_sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
+y_sigma_all.extend([all_layer_Hl, 0])
+sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
+
+load_height_top = all_layer_Hl - (all_layer_Hl - layer_dry.Hzc()) / 3
+load_height_bot = (all_layer_Hl - layer_dry.Hzc()) / 3
 
 
-# Tools in toolbox
-TOOLS = 'pan,box_zoom,reset,save'
 
 plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
                     x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)", # sigma_AEH
@@ -153,25 +143,19 @@ plot_sigma = figure(#title="Horizontal Pseudo-Static Lateral Earth Pressure",
                     y_range=(0.99*example.Hl(),example.Hl()-30),
                     plot_width=200,
                     plot_height=400,
-                    #toolbar_location="above",
-                    toolbar_location=None,
-                    toolbar_sticky=False,
-                    tools=TOOLS)
+                    toolbar_location=None)
 
 sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
 plot_sigma.add_glyph(source_example, sigma_plot)
 
 
-load_height_top = ((layer_dry.Hl()+layer_wet.Hl())
-                - ((layer_dry.Hl()+layer_wet.Hl()) - layer_dry.Hzc())/3)
-load_height_bot = ((layer_dry.Hl()+layer_wet.Hl()) - layer_dry.Hzc())/3
-
 # Arrow data
 source_arrow1 = ColumnDataSource(data={
-        'x0': [example.sigma_AEH(example.H)],
-        'y0': [example.Hl()-example.Hp1()],
-        'y1': [example.Hl()-example.Hp1()]
+    'x0': [example.sigma_AEH(example.H)],
+    'y0': [example.Hl() - example.Hp1()],
+    'y1': [example.Hl() - example.Hp1()]
 })
+
 
 arrow1 = Arrow(end=OpenHead(line_color="black",
                             line_width=3,
@@ -185,11 +169,9 @@ arrow1 = Arrow(end=OpenHead(line_color="black",
 plot_sigma.add_layout(arrow1)
 
 
-print(example.sigma_AEH(example.H))
 
-
-load1 = Label(x=0.3*example.sigma_AEH(example.H),
-              y=example.Hl()-example.Hp1(),
+load1 = Label(x=0.3 * example.sigma_AEH(example.H),
+              y=example.Hl() - example.Hp1(),
               text="{:.0f} kN".format(example.P_AEH1()),
               text_font_style='bold',
               border_line_width=2,
@@ -197,8 +179,8 @@ load1 = Label(x=0.3*example.sigma_AEH(example.H),
               text_color='red')
 plot_sigma.add_layout(load1)
 
-h_load1 = Label(x=0.3*example.sigma_AEH(example.H),
-                y=example.Hl()-example.Hp1(),
+h_load1 = Label(x=0.3 * example.sigma_AEH(example.H),
+                y=example.Hl() - example.Hp1(),
                 text="@ {:.2f} m".format(example.Hp1()),
                 text_font_style='bold',
                 border_line_width=2,
@@ -207,6 +189,7 @@ h_load1 = Label(x=0.3*example.sigma_AEH(example.H),
                 y_offset=-20)
 plot_sigma.add_layout(h_load1)
 plot_sigma.min_border_left = 50
+
 
 error = Label(x=115,
               y=300,
@@ -227,21 +210,75 @@ error.visible = False
 
 
 
-test_plot = figure( x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)", # sigma_AEH
-                    y_axis_label="Depth Along Wall Length 'Zl' (m)",
-                    y_range=(0.99*example.Hl(),example.Hl()-30),
-                    plot_width=200,
-                    plot_height=400,
-                    toolbar_location=None,
-                    toolbar_sticky=False)
 
-test_sigma_plot = Patch(x='x', y='y', fill_color = '#EEEEEE', line_color = 'black')
-#test_plot.add_glyph(layer_dry_sigma_data, test_sigma_plot)
-#test_plot.add_glyph(layer_wet_sigma_data, test_sigma_plot)
-test_plot.add_glyph(layer_sigma_data, test_sigma_plot)
+sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
+                      y_axis_label="Depth Along Wall Length 'Zl' (m)",
+                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 30),
+                      plot_width=200,
+                      plot_height=400,
+                      toolbar_location=None,
+                      toolbar_sticky=False)
 
 
+sigma_patch = Patch(x='x', y='y', fill_color='#EEEEEE', line_color='black')
+sigma_figure.add_glyph(sigma_data, sigma_patch)
 
+
+force = PolyArea(x_sigma_all, y_sigma_all) * np.cos(np.radians(omega))
+
+arrow_data = ColumnDataSource(data=dict(
+    x0 = [max(x_sigma_all)],
+    y0 = [load_height_top],
+    y1 = [load_height_top]
+))
+
+
+force_arrow = Arrow(end=OpenHead(line_color="black",
+                                 line_width=3,
+                                 line_join='bevel'),
+                    line_width=3,
+                    x_start='x0',
+                    y_start='y0',
+                    x_end=0,
+                    y_end='y1',
+                    source=arrow_data)
+sigma_figure.add_layout(force_arrow)
+
+
+arrow_load = Label(x=0.27 * max(x_sigma_all),
+                   y=load_height_top,
+                   text='{:.0f} kN'.format(force),
+                   text_font_style='bold',
+                   border_line_width=2,
+                   text_font_size='16pt',
+                   text_color='red')
+sigma_figure.add_layout(arrow_load)
+
+arrow_height = Label(x=0.27 * max(x_sigma_all),
+                     y=load_height_top,
+                     text='@ {:.2f} m'.format(load_height_bot),
+                     text_font_style='bold',
+                     border_line_width=2,
+                     text_font_size='12pt',
+                     text_color='red',
+                     y_offset=-20)
+sigma_figure.add_layout(arrow_height)
+sigma_figure.min_border_left = 50
+
+
+sigma_error = Label(x=115,
+              y=300,
+              x_units='screen',
+              y_units='screen',
+              render_mode='css',
+              text="Inadmissible\nCondition!",
+              text_font_style='bold',
+              text_align='center',
+              border_line_width=2,
+              text_font_size='12pt',
+              text_color='red')
+sigma_figure.add_layout(sigma_error)
+sigma_error.visible = False
 
 
 
@@ -267,11 +304,8 @@ plot = figure(#title="Retaining Wall and Backfill Properties",
               plot_width=350,
               plot_height=400,
               y_range=(0,30),
-              #toolbar_location="above",
               toolbar_location=None,
-              toolbar_sticky=False,
-              background_fill_alpha=0.1,
-              tools=TOOLS)
+              background_fill_alpha=0.1)
 plot.xaxis.visible = False
 
 wall = Patch(x='x',
@@ -296,20 +330,6 @@ water = Patch(x='x',
               line_color = 'LightSeaGreen',
               line_width=1.5)
 plot.add_glyph(source_ewt, water)
-
-# Beta angle
-# plot.line(x=[source_wall.data['x'][2],8],
-#           y=[source_wall.data['y'][2],source_wall.data['y'][2]],
-#           line_color = 'black',
-#           line_dash='dashed')
-#
-# plot.arc(x=source_wall.data['x'][2],
-#          y=source_wall.data['y'][2],
-#          radius=3.5,
-#          start_angle=0,
-#          end_angle=np.radians(beta),
-#          line_width=1,
-#          color='black')
 
 
 wall_label_data = ColumnDataSource(data=dict(
@@ -400,7 +420,6 @@ mohr_circle_data = ColumnDataSource(data=dict(
             )
 
 
-
 mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
                    y_axis_label='\u03C4 (kPa)',
                    plot_width=400,
@@ -408,17 +427,7 @@ mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
                    toolbar_location=None,
                    x_range=(0, 2.0 * example.Ja(H)),
                    y_range=(0, 2.03 * example.Ja(H)),
-                   #background_fill_color='red',
-                   background_fill_alpha=0.1
-                   #match_aspect=True,
-                   #aspect_scale = 1.0
-                   )
-# mohr_plot.y_range.start = 0
-# mohr_plot.x_range.start = 0
-# mohr_plot.y_range.end = 2.0 * example.Ja(H)
-# mohr_plot.x_range.end = 2.0 * example.Ja(H)
-#mohr_plot.xaxis.visible = False
-#mohr_plot.yaxis.visible = False
+                   background_fill_alpha=0.1)
 
 
 fail_line = mohr_plot.line(
@@ -442,8 +451,8 @@ mohr_plot.circle(x='center',
                  fill_color=None,
                  line_width=2,
                  color='black',
-                 #radius_dimension='y',
                  source=mohr_circle_data)
+
 
 # Calculate intersection points for effective stress envelope
 x_line_inter, y_line_inter = line_circle_intersect(
@@ -468,7 +477,6 @@ x_sigma_inter, y_sigma_inter = line_circle_intersect(
                                 r=mohr_circle_data.data['radius'][0],
                                 angle=0,
                                 c=0)
-
 
 
 # Store data in a ColumnDataSource
@@ -510,35 +518,35 @@ mohr_plot.circle(x='x_conj_inter',
 #                  source=intersect_data)
 
 
-arc_data = ColumnDataSource(data=dict(
-                x_phi = [-c/np.radians(phi)],
-                y_phi = [0],
-                phi_radius = [0.15 * 2.0 * example.Ja(H)],
-                phi_end_angle = [np.radians(phi)],
-                x_beta = [0],
-                y_beta = [0],
-                beta_radius = [0.16 * 2.0 * example.Ja(H)],
-                beta_end_angle = [np.radians(beta)+example.theta()]
-                )
-            )
-
-mohr_plot.arc(x='x_phi',
-              y='y_phi',
-              radius='phi_radius',
-              start_angle=0,
-              end_angle='phi_end_angle',
-              line_width=2,
-              color="#1F77B4",
-              source=arc_data)
-
-mohr_plot.arc(x='x_beta',
-              y='y_beta',
-              radius='beta_radius',
-              start_angle=0,
-              end_angle='beta_end_angle',
-              line_width=2,
-              color="orange",
-              source=arc_data)
+# arc_data = ColumnDataSource(data=dict(
+#                 x_phi = [-c/np.radians(phi)],
+#                 y_phi = [0],
+#                 phi_radius = [0.15 * 2.0 * example.Ja(H)],
+#                 phi_end_angle = [np.radians(phi)],
+#                 x_beta = [0],
+#                 y_beta = [0],
+#                 beta_radius = [0.16 * 2.0 * example.Ja(H)],
+#                 beta_end_angle = [np.radians(beta)+example.theta()]
+#                 )
+#             )
+#
+# mohr_plot.arc(x='x_phi',
+#               y='y_phi',
+#               radius='phi_radius',
+#               start_angle=0,
+#               end_angle='phi_end_angle',
+#               line_width=2,
+#               color="#1F77B4",
+#               source=arc_data)
+#
+# mohr_plot.arc(x='x_beta',
+#               y='y_beta',
+#               radius='beta_radius',
+#               start_angle=0,
+#               end_angle='beta_end_angle',
+#               line_width=2,
+#               color="orange",
+#               source=arc_data)
 
 
 mohr_bold_label_data = ColumnDataSource(data=dict(
@@ -589,10 +597,48 @@ mohr_sigma_labels = LabelSet(x='x',
                        source=mohr_sigma_label_data)
 mohr_plot.add_layout(mohr_sigma_labels)
 
-
-
-
 mohr_plot.legend.location = "top_left"
+
+
+
+
+circle_center = layer_dry.Ja(min(H,abs(ewt))) + layer_wet.Ja(max(0,H+ewt))
+
+mohr_plot2 = figure(x_axis_label="\u03C3' (kPa)",
+                   y_axis_label='\u03C4 (kPa)',
+                   plot_width=400,
+                   plot_height=400,
+                   toolbar_location=None,
+                   x_range=(0, 2.0 * circle_center),
+                   y_range=(0, 2.03 * circle_center),
+                   background_fill_alpha=0.1)
+
+
+mohr2_circle_data = ColumnDataSource(data=dict(
+                y = [0],
+                center = [circle_center],
+                # Circle radius from equation 11
+                radius = [(c * (1/np.tan(np.radians(phi)))
+                           + circle_center) * np.sin(np.radians(phi))],
+                )
+            )
+
+
+mohr_plot2.circle(x='center',
+                 y='y',
+                 radius='radius',
+                 fill_color=None,
+                 line_width=2,
+                 color='black',
+                 source=mohr2_circle_data)
+
+
+
+
+
+
+
+
 
 
 ##############################################################################
@@ -710,7 +756,7 @@ def update_plot(attr, old, new):
     new_example = sep(kh, kv, omega, beta, phi, gamma, c, H)
     new_layer_dry = sep(kh, kv, omega, beta, phi, gamma, c, min(H,abs(ewt)))
     new_layer_wet = sep(kh, kv, omega, beta, phi, gamma-gamma_w, c, max(0,H+ewt))
-
+    new_all_layer_Hl = new_layer_dry.Hl() + new_layer_wet.Hl()
 
     mohr_plot.x_range.end = 2.0 * new_example.Ja(H)
     mohr_plot.y_range.end = 2.03 * new_example.Ja(H)
@@ -733,21 +779,21 @@ def update_plot(attr, old, new):
     new_x_sigma_all.extend([0,0])
     new_y_sigma_all = new_sigma_y_dry.tolist()
     new_y_sigma_all.extend((new_sigma_y_wet + new_layer_dry.Hl()).tolist())
-    new_y_sigma_all.extend([new_layer_dry.Hl()+new_layer_wet.Hl(),0])
+    new_y_sigma_all.extend([new_all_layer_Hl,0])
 
     ### Update the data
     source_wall.data = dict(x=new_x_wall, y=new_y_wall)
     source_earth.data = dict(x=new_x_earth, y=new_y_earth)
     source_ewt.data = dict(x=new_x_ewt, y=new_y_ewt)
     source_example.data = dict(x=new_x_sigma, y=new_y_sigma)
-    layer_sigma_data.data=dict(x=new_x_sigma_all, y=new_y_sigma_all)
-    force = PolyArea(new_x_sigma_all,new_y_sigma_all) * np.cos(np.radians(omega))
-    print(force)
+    sigma_data.data=dict(x=new_x_sigma_all, y=new_y_sigma_all)
+    new_force = PolyArea(new_x_sigma_all,new_y_sigma_all) * np.cos(np.radians(omega))
+    print(new_force)
     plot_sigma.y_range.start=0.99*new_example.Hl()
     plot_sigma.y_range.end=(new_example.Hl()-30)
 
-    test_plot.y_range.start=0.99*(new_layer_dry.Hl()+new_layer_wet.Hl())
-    test_plot.y_range.end= (new_layer_dry.Hl()+new_layer_wet.Hl()) - 30
+    sigma_figure.y_range.start=0.99*(new_layer_dry.Hl()+new_layer_wet.Hl())
+    sigma_figure.y_range.end= (new_layer_dry.Hl()+new_layer_wet.Hl()) - 30
 
     wall_label_data.data=dict(
                             x=[100,100,100,100],
@@ -823,16 +869,16 @@ def update_plot(attr, old, new):
                     y_sigma_inter = y_sigma_inter
                     )
 
-    arc_data.data=dict(
-                    x_phi = [-c/np.radians(phi)],
-                    y_phi = [0],
-                    phi_radius = [0.15 * 2.0 * new_example.Ja(H)],
-                    phi_end_angle = [np.radians(phi)],
-                    x_beta = [0],
-                    y_beta = [0],
-                    beta_radius = [0.16 * 2.0 * new_example.Ja(H)],
-                    beta_end_angle = [np.radians(beta)+new_example.theta()]
-                    )
+    # arc_data.data=dict(
+    #                 x_phi = [-c/np.radians(phi)],
+    #                 y_phi = [0],
+    #                 phi_radius = [0.15 * 2.0 * new_example.Ja(H)],
+    #                 phi_end_angle = [np.radians(phi)],
+    #                 x_beta = [0],
+    #                 y_beta = [0],
+    #                 beta_radius = [0.16 * 2.0 * new_example.Ja(H)],
+    #                 beta_end_angle = [np.radians(beta)+new_example.theta()]
+    #                 )
 
     mohr_bold_label_data.data=dict(
                             x=[70,77.8,66,70,70],
@@ -865,6 +911,7 @@ def update_plot(attr, old, new):
         # load1.visible = False
         # h_load1.visible = False
         error.visible = True
+        sigma_error.visible = True
         mohr_plot.background_fill_color = 'red'
 
     else:
@@ -874,6 +921,7 @@ def update_plot(attr, old, new):
         # load1.visible = True
         # h_load1.visible = True
         error.visible = False
+        sigma_error.visible = False
         mohr_plot.background_fill_color = None
 
 
@@ -912,6 +960,25 @@ def update_plot(attr, old, new):
     h_load1.text="@ {:.2f} m".format(new_example.Hp1())
     h_load1.x=0.3*new_example.sigma_AEH(new_example.H)
     h_load1.y=new_example.Hl()-new_example.Hp1()
+
+    # New arrow
+    new_load_height_top = new_all_layer_Hl - \
+        (new_all_layer_Hl - new_layer_dry.Hzc()) / 3
+    new_load_height_bot = (new_all_layer_Hl - new_layer_dry.Hzc()) / 3
+
+    arrow_data.data=dict(
+        x0= [max(new_x_sigma_all)],
+        y0= [new_load_height_top],
+        y1= [new_load_height_top]
+    )
+
+    arrow_load.x = 0.27 * max(new_x_sigma_all)
+    arrow_load.y = new_load_height_top
+    arrow_load.text = '{:.0f} kN'.format(new_force)
+    arrow_height.x = 0.27 * max(new_x_sigma_all)
+    arrow_height.y = new_load_height_top
+    arrow_height.text='@ {:.2f} m'.format(new_load_height_bot)
+
 
 
 
@@ -1148,9 +1215,8 @@ page_layout = layout([
                      width=350),
                  Div(text="<h4>Zw<br>(m)</h4>", width=70)],
                 [plot, ewt_slider, Spacer(width=20),
-                 plot_sigma, Spacer(width=20),
-                 mohr_plot, zw_slider],
-                [test_plot],
+                 sigma_figure, Spacer(width=20),
+                 mohr_plot, zw_slider, mohr_plot2],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
