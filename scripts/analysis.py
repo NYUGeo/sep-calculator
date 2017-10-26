@@ -178,3 +178,26 @@ class sep (object):
 ### Test with:
 ### figure5 = sep(0.2, -0.1, 20, 15, 30, 23, 20, 15)
 ### figure13 = sep(0.2, 0.1, 10, 15, 0, 20, 100, 10)
+
+
+def line_circle_intersect(h,k,r,angle,c):
+
+    # Slope
+    a = np.tan(np.radians(angle))
+
+    # Solving the system for x
+    x_inter_pos = ((np.sqrt((a**2 + 1) * r**2 - c**2 - 2*c*(a*h - k)
+                            - a**2 * h**2 + 2*a*h*k - k**2)
+                    - c * a + a * k + h
+                    )/(a**2 + 1))
+
+    x_inter_neg = (-(np.sqrt((a**2 + 1) * r**2 - c**2 - 2*c*(a*h - k)
+                            - a**2 * h**2 + 2*a*h*k - k**2)
+                    + c * a - a * k - h
+                    )/(a**2 + 1))
+
+    x_intersect = np.array([x_inter_pos, x_inter_neg])
+
+    y_intersect = a * x_intersect + c
+
+    return x_intersect, y_intersect
