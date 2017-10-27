@@ -92,10 +92,12 @@ y_ewt = [yK, yL, yF, yD]
 ###                                LAYERS                                  ###
 ##############################################################################
 
-layer1 = sep(kh, kv, omega, beta, phi1, gamma1, c1, H1)
-layer2 = sep(kh, kv, omega, beta, phi2, gamma2, c2, H2)
+layer1_dry = sep(kh, kv, omega, beta, phi1, gamma1, c1, H1)
+layer1_wet = sep(kh, kv, omega, beta, phi1, gamma1-gamma_w, c1, H1)
+layer2_dry = sep(kh, kv, omega, beta, phi2, gamma2, c2, H2)
+layer2_wet = sep(kh, kv, omega, beta, phi2, gamma2-gamma_w, c2, H2)
 
-all_layer_Hl = layer1.Hl() + layer2.Hl()
+all_layer_Hl = layer1_dry.Hl() + layer2_dry.Hl()
 
 
 # Shoelace formula
@@ -254,7 +256,14 @@ wall_plot.add_layout(soil_labels)
 # sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
 # sigma_x_wet = (layer_wet.sigma_AEH(sigma_y_wet)
 #                + layer_dry.sigma_AEH(layer_dry.Hl()))
-#
+
+sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
+sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
+sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
+sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
+                  + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+
+
 # x_sigma_all = sigma_x_dry.tolist()
 # x_sigma_all.extend(sigma_x_wet.tolist())
 # x_sigma_all.extend([0, 0])
