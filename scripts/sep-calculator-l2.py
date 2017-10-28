@@ -7,7 +7,8 @@ from bokeh.client import push_session
 from bokeh import models
 from bokeh.plotting import figure
 from bokeh.io import output_file, show, curdoc
-from bokeh.models import ColumnDataSource, Slider, Arrow, OpenHead, Label, LabelSet, Div
+from bokeh.models import (ColumnDataSource, Slider, Arrow, OpenHead, Label,
+                            LabelSet, Div, Legend)
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.models.glyphs import Patch
 from bokeh.layouts import widgetbox, row, column, layout, Spacer
@@ -17,7 +18,8 @@ from bokeh.layouts import widgetbox, row, column, layout, Spacer
 kh = 0.15
 kv = 0
 omega = 15
-beta = 10
+beta1 = 10
+beta2 = 0
 
 H1 = 6
 phi1 = 30
@@ -30,7 +32,7 @@ gamma2 = 20
 c2 = 0
 
 H = H1 + H2
-ewt = -H
+ewt = -6
 gamma_w = 9.8
 
 
@@ -46,7 +48,7 @@ angleA = np.radians(88)
 xB = H / np.tan(angleA)
 yB = H
 
-xC = xB + 3
+xC = xB + 4
 yC = H
 
 xD = xC + H * np.tan(np.radians(omega))
@@ -56,13 +58,14 @@ yD = 0
 # Backfill Coordinates
 # Layer 1
 xE = xC + 15
-yE = yC + 15 * np.tan(np.radians(beta))
+yE = yC + 15 * np.tan(np.radians(beta1))
 
 xM = xC + H1 * np.tan(np.radians(omega))
 yM = H2
 
 xN = xE
-yN = yM
+#yN = yM
+yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2))
 
 # Layer 2
 xF = xE
@@ -92,12 +95,26 @@ y_ewt = [yK, yL, yF, yD]
 ###                                LAYERS                                  ###
 ##############################################################################
 
-layer1_dry = sep(kh, kv, omega, beta, phi1, gamma1, c1, H1)
-layer1_wet = sep(kh, kv, omega, beta, phi1, gamma1-gamma_w, c1, H1)
-layer2_dry = sep(kh, kv, omega, beta, phi2, gamma2, c2, H2)
-layer2_wet = sep(kh, kv, omega, beta, phi2, gamma2-gamma_w, c2, H2)
+if abs(ewt) >= H:
+    layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, H1)
+    layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2, H2)
+    layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, 0.00000001)
+    layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, 0.00000001)
+elif H1 <= abs(ewt) < H:
+    layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, H1)
+    temp_var = abs(ewt)-H1
+    layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2,
+                     temp_var if temp_var !=0 else 0.00000001)
+    layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, 0.00000001)
+    layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, H+ewt)
+else:
+    layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, abs(ewt))
+    layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2, 0.00000001)
+    layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, H1+ewt)
+    layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, H2)
 
-all_layer_Hl = layer1_dry.Hl() + layer2_dry.Hl()
+all_layer_Hl = (layer1_dry.Hl() + layer2_dry.Hl()
+                + layer1_wet.Hl() + layer2_wet.Hl())
 
 
 # Shoelace formula
@@ -137,12 +154,12 @@ wall_plot = figure(
     # title_location="above",
     x_axis_label='x-axis',
     y_axis_label='Height (m)',
-    plot_width=350,
+    plot_width=375,
     plot_height=400,
     y_range=(0, 30),
     toolbar_location=None,
     background_fill_alpha=0.1)
-#wall_plot.xaxis.visible = False
+wall_plot.xaxis.visible = False
 
 wall = Patch(
     x='x',
@@ -181,11 +198,11 @@ wall_plot.add_glyph(ewt_data, water)
 wall_label_data = ColumnDataSource(data=dict(
     x=[100, 100, 100, 100, 100],
     y=[110 - i * 15 for i in range(5)],
-    names=['H: {:.1f} m'.format(H1+H2),
+    names=['WT: {:.1f} m'.format(ewt),
+           'H: {:.1f} m'.format(H1+H2),
            '\u03B1h: {:.2f}g'.format(kh),
            '\u03B1v: {:.2f}g'.format(kv),
-           '\u03C9: {:.0f}\u1d52'.format(omega),
-           '\u03B2: {:.0f}\u1d52'.format(beta)]))
+           '\u03C9: {:.0f}\u1d52'.format(omega)]))
 
 wall_labels = LabelSet(
     x='x',
@@ -201,18 +218,21 @@ wall_labels = LabelSet(
 wall_plot.add_layout(wall_labels)
 
 soil_label_data = ColumnDataSource(data=dict(
-    x=[10, 10, 10, 14, 14, 10, 10, 14, 14],
-    y=[H1+H2-1, H2+H1/2+0.5, H2+H1/2-0.5, H2+H1/2+0.5, H2+H1/2-0.5,
-       H2/2, H2/2-1, H2/2, H2/2-1],
-    names=['EWT: {:.1f} m'.format(ewt),
+    x=[10, 14, 10, 10, 14, 14, 10, 14, 10, 10, 14, 14],
+    y=[H2+H1/2+1, H2+H1/2+1, H2+H1/2, H2+H1/2-1, H2+H1/2, H2+H1/2-1,
+       H2/2+1, H2/2+1, H2/2, H2/2-1, H2/2, H2/2-1],
+    names=['LAYER 1',
+           '\u03B2: {:.0f}\u1d52'.format(beta1),
            'H: {:.1f} m'.format(H1),
            '\u03C6: {:.0f}\u1d52'.format(phi1),
            'c: {:.0f} kPa'.format(c1),
-           '\u03B3: {:.0f}\u1d52'.format(gamma1),
+           '\u03B3: {:.0f} kPa'.format(gamma1),
+           'LAYER 2',
+           '\u03B2: {:.0f}\u1d52'.format(beta2),
            'H: {:.1f} m'.format(H2),
            '\u03C6: {:.0f}\u1d52'.format(phi2),
            'c: {:.0f} kPa'.format(c2),
-           '\u03B3: {:.0f}\u1d52'.format(gamma2)]))
+           '\u03B3: {:.0f} kPa'.format(gamma2)]))
 
 soil_labels = LabelSet(
     x='x',
@@ -251,94 +271,126 @@ wall_plot.add_layout(soil_labels)
 ###                              STRESS PLOT                               ###
 ##############################################################################
 
-# sigma_y_dry = np.arange(0.0001, layer_dry.Hl(), 0.1)
-# sigma_x_dry = layer_dry.sigma_AEH(sigma_y_dry)
-# sigma_y_wet = np.arange(0.0001, layer_wet.Hl(), 0.1)
-# sigma_x_wet = (layer_wet.sigma_AEH(sigma_y_wet)
-#                + layer_dry.sigma_AEH(layer_dry.Hl()))
-
 sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
 sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
 sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
 sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
                   + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+sigma_l2_y_dry = np.arange(0.0001, layer2_dry.Hl(), 0.1)
+sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
+                  + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+
+sigma_l2_y_wet = np.arange(0.0001, layer2_wet.Hl(), 0.1)
+sigma_l2_x_wet = (layer2_wet.sigma_AEH(sigma_l2_y_wet)
+                  + layer2_dry.sigma_AEH(layer2_dry.Hl())
+                  + layer1_dry.sigma_AEH(layer1_dry.Hl())
+                  + layer1_wet.sigma_AEH(layer1_wet.Hl()))
+
+y_sigma_all = sigma_l1_y_dry.tolist()
+x_sigma_all = sigma_l1_x_dry.tolist()
+y_sigma_all.extend((sigma_l1_y_wet + layer1_dry.Hl()).tolist())
+x_sigma_all.extend(sigma_l1_x_wet.tolist())
+y_sigma_all.extend((sigma_l2_y_dry + layer1_dry.Hl()).tolist())
+x_sigma_all.extend(sigma_l2_x_dry.tolist())
+y_sigma_all.extend((sigma_l2_y_wet + layer1_dry.Hl() + layer1_wet.Hl()
+                    + layer2_dry.Hl()).tolist())
+x_sigma_all.extend(sigma_l2_x_wet.tolist())
+y_sigma_all.extend([all_layer_Hl])
+x_sigma_all.extend([0])
+
+sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
 
 
-# x_sigma_all = sigma_x_dry.tolist()
-# x_sigma_all.extend(sigma_x_wet.tolist())
-# x_sigma_all.extend([0, 0])
-# y_sigma_all = sigma_y_dry.tolist()
-# y_sigma_all.extend((sigma_y_wet + layer_dry.Hl()).tolist())
-# y_sigma_all.extend([all_layer_Hl, 0])
-# sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
-#
-# load_height_top = all_layer_Hl - (all_layer_Hl - layer_dry.Hzc()) / 3
-# load_height_bot = (all_layer_Hl - layer_dry.Hzc()) / 3
-#
-#
-# sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
-#                       y_axis_label="Depth Along Wall Length 'Zl' (m)",
-#                       y_range=(0.99 * all_layer_Hl, all_layer_Hl - 30),
-#                       plot_width=200,
-#                       plot_height=400,
-#                       toolbar_location=None,
-#                       toolbar_sticky=False)
-#
-# sigma_patch = Patch(x='x', y='y', fill_color='#EEEEEE', line_color='black')
-# sigma_figure.add_glyph(sigma_data, sigma_patch)
-#
-# force = PolyArea(x_sigma_all, y_sigma_all) * np.cos(np.radians(omega))
-#
-# arrow_data = ColumnDataSource(data=dict(
-#     x0 = [max(x_sigma_all)],
-#     y0 = [load_height_top],
-#     y1 = [load_height_top]
-# ))
-#
-# force_arrow = Arrow(end=OpenHead(line_color="black",
-#                                  line_width=3,
-#                                  line_join='bevel'),
-#                     line_width=3,
-#                     x_start='x0',
-#                     y_start='y0',
-#                     x_end=0,
-#                     y_end='y1',
-#                     source=arrow_data)
-# sigma_figure.add_layout(force_arrow)
-#
-# arrow_load = Label(x=0.27 * max(x_sigma_all),
-#                    y=load_height_top,
-#                    text='{:.0f} kN'.format(force),
-#                    text_font_style='bold',
-#                    border_line_width=2,
-#                    text_font_size='16pt',
-#                    text_color='red')
-# sigma_figure.add_layout(arrow_load)
-#
-# arrow_height = Label(x=0.27 * max(x_sigma_all),
-#                      y=load_height_top,
-#                      text='@ {:.2f} m'.format(load_height_bot),
-#                      text_font_style='bold',
-#                      border_line_width=2,
-#                      text_font_size='12pt',
-#                      text_color='red',
-#                      y_offset=-20)
-# sigma_figure.add_layout(arrow_height)
-# sigma_figure.min_border_left = 50
-#
-# sigma_error = Label(x=115,
-#               y=300,
-#               x_units='screen',
-#               y_units='screen',
-#               render_mode='css',
-#               text="Inadmissible\nCondition!",
-#               text_font_style='bold',
-#               text_align='center',
-#               border_line_width=2,
-#               text_font_size='12pt',
-#               text_color='red')
-# sigma_figure.add_layout(sigma_error)
-# sigma_error.visible = False
+load_height_top = all_layer_Hl - all_layer_Hl / 3
+load_height_bot = all_layer_Hl / 3
+
+
+sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
+                      y_axis_label="Depth Along Wall Length 'Zl' (m)",
+                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 30),
+                      plot_width=200,
+                      plot_height=400,
+                      toolbar_location=None,
+                      toolbar_sticky=False)
+
+sigma_patch = Patch(x='x', y='y', fill_color='#EEEEEE', line_color='black')
+sigma_figure.add_glyph(sigma_data, sigma_patch)
+
+force = PolyArea(x_sigma_all, y_sigma_all) * (np.cos(np.radians(omega))**2)
+
+arrow_data = ColumnDataSource(data=dict(
+    x0 = [max(x_sigma_all)],
+    y0 = [load_height_top],
+    y1 = [load_height_top]
+))
+
+force_arrow = Arrow(end=OpenHead(line_color="black",
+                                 line_width=3,
+                                 line_join='bevel'),
+                    line_width=3,
+                    x_start='x0',
+                    y_start='y0',
+                    x_end=0,
+                    y_end='y1',
+                    source=arrow_data)
+sigma_figure.add_layout(force_arrow)
+
+arrow_load = Label(x=0.27 * max(x_sigma_all),
+                   y=load_height_top,
+                   text='{:.0f} kN'.format(force),
+                   text_font_style='bold',
+                   border_line_width=2,
+                   text_font_size='16pt',
+                   text_color='red')
+sigma_figure.add_layout(arrow_load)
+
+arrow_height = Label(x=0.27 * max(x_sigma_all),
+                     y=load_height_top,
+                     text='@ ~{:.2f} m'.format(load_height_bot),
+                     text_font_style='bold',
+                     border_line_width=2,
+                     text_font_size='12pt',
+                     text_color='red',
+                     y_offset=-20)
+sigma_figure.add_layout(arrow_height)
+sigma_figure.min_border_left = 50
+
+
+line_div_data = ColumnDataSource(data=dict(
+    x1 = [0,layer1_dry.sigma_AEH(layer1_dry.Hl())+layer1_wet.sigma_AEH(layer1_wet.Hl())],
+    y1 = [layer1_dry.Hl()+layer1_wet.Hl(),layer1_dry.Hl()+layer1_wet.Hl()],
+    x2 = [0,layer1_dry.sigma_AEH(layer1_dry.Hl())+layer2_dry.sigma_AEH(layer2_dry.Hl())],
+    y2 = [layer1_dry.Hl()+layer2_dry.Hl(),layer1_dry.Hl()+layer2_dry.Hl()]
+))
+
+sigma_figure.line(
+    x='x1',
+    y='y1',
+    source=line_div_data,
+    line_color='black',
+    line_dash='dashed')
+
+sigma_figure.line(
+    x='x2',
+    y='y2',
+    source=line_div_data,
+    line_color='LightSeaGreen',
+    line_dash='dashed')
+
+
+sigma_error = Label(x=115,
+              y=300,
+              x_units='screen',
+              y_units='screen',
+              render_mode='css',
+              text="Inadmissible\nCondition!",
+              text_font_style='bold',
+              text_align='center',
+              border_line_width=2,
+              text_font_size='12pt',
+              text_color='red')
+sigma_figure.add_layout(sigma_error)
+sigma_error.visible = False
 
 
 
@@ -352,86 +404,185 @@ sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
 #                     + layer_wet.Ja(max(0,H+ewt)))
 # else:
 #     circle_center = layer_dry.Ja(min(H,abs(ewt)))
-#
-# mohr_plot = figure(x_axis_label="\u03C3' (kPa)",
-#                    y_axis_label='\u03C4 (kPa)',
-#                    plot_width=400,
-#                    plot_height=400,
-#                    toolbar_location=None,
-#                    x_range=(0, 2.0 * circle_center),
-#                    y_range=(0, 2.03 * circle_center),
-#                    background_fill_alpha=0.1)
-#
-# mohr_line_data = ColumnDataSource(data=dict(
-#                 x_fail = [0, 1.5*circle_center],
-#                 y_fail = [c, c + (np.tan(np.radians(phi))*1.5*circle_center)],
-#                 x_conj = [0, 1.9*circle_center],
-#                 y_conj = [0, (np.tan(np.radians(beta) + layer_dry.theta())
-#                              ) * 1.9 * circle_center],
-#                 ))
-#
-# mohr_circle_data = ColumnDataSource(data=dict(
-#                 y = [0],
-#                 center = [circle_center],
-#                 # Circle radius from equation 11
-#                 radius = [(c * (1/np.tan(np.radians(phi)))
-#                            + circle_center) * np.sin(np.radians(phi))],
-#                 ))
-#
-# mohr_plot.line(x='x_fail',
-#                 y='y_fail',
-#                 source=mohr_line_data,
-#                 line_width=2,
-#                 legend='Effective stress M-C failure envelope')
-#
-# mohr_plot.line(x='x_conj',
-#                 y='y_conj',
-#                 source=mohr_line_data,
-#                 line_width=3,
-#                 color='orange',
-#                 legend='Conjugate stress line')
-#
-# mohr_plot.circle(x='center',
-#                  y='y',
-#                  radius='radius',
-#                  fill_color=None,
-#                  line_width=2,
-#                  color='black',
-#                  source=mohr_circle_data)
-#
-#
-# # Calculate intersection points for effective stress envelope
-# x_line_inter, y_line_inter = line_circle_intersect(
-#                                 h=mohr_circle_data.data['center'][0],
-#                                 k=0,
-#                                 r=mohr_circle_data.data['radius'][0],
-#                                 angle=phi,
-#                                 c=c)
-#
-# # Calculate intersection points for conjugate stress line
-# x_conj_inter, y_conj_inter = line_circle_intersect(
-#                                 h=mohr_circle_data.data['center'][0],
-#                                 k=0,
-#                                 r=mohr_circle_data.data['radius'][0],
-#                                 angle=beta+np.degrees(layer_dry.theta()),
-#                                 c=0)
-#
-# # Store data in a ColumnDataSource
-# intersect_data = ColumnDataSource(data=dict(
-#                 x_line_inter = x_line_inter,
-#                 y_line_inter = y_line_inter,
-#                 x_conj_inter = x_conj_inter,
-#                 y_conj_inter = y_conj_inter
-#                 ))
-#
-# mohr_plot.circle(x='x_conj_inter',
-#                  y='y_conj_inter',
-#                  line_color='orange',
-#                  line_width=2,
-#                  fill_color='white',
-#                  size=7,
-#                  source=intersect_data)
-#
+
+l1_circle_center = layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
+l2_circle_center = (l1_circle_center
+                    + layer2_dry.Ja(layer2_dry.H)
+                    + layer2_wet.Ja(layer2_wet.H))
+
+
+l1_mohr_plot = figure(
+    x_axis_label="\u03C3' (kPa)",
+    y_axis_label='\u03C4 (kPa)',
+    plot_width=200,
+    plot_height=200,
+    toolbar_location=None,
+    x_range=(0, 2.0 * l1_circle_center),
+    y_range=(0, 2.03 * l1_circle_center),
+    background_fill_alpha=0.1)
+
+l2_mohr_plot = figure(
+    x_axis_label="\u03C3' (kPa)",
+    y_axis_label='\u03C4 (kPa)',
+    plot_width=200,
+    plot_height=200,
+    toolbar_location=None,
+    x_range=(0, 2.0 * l2_circle_center),
+    y_range=(0, 2.03 * l2_circle_center),
+    background_fill_alpha=0.1)
+
+mohr_plot = figure(
+    x_axis_label="\u03C3' (kPa)",
+    y_axis_label='\u03C4 (kPa)',
+    plot_width=400,
+    plot_height=400,
+    toolbar_location=None,
+    x_range=(0, 2.0 * max(l1_circle_center,l2_circle_center)),
+    y_range=(0, 2.03 * max(l1_circle_center,l2_circle_center)),
+    background_fill_alpha=0.1)
+
+
+mohr_line_data = ColumnDataSource(data=dict(
+    x_fail1=[0, 1.5 * l1_circle_center],
+    y_fail1=[c1, c1 + (np.tan(np.radians(phi1)) * 1.5 * l1_circle_center)],
+    x_conj1=[0, 1.9 * l1_circle_center],
+    y_conj1=[0, (np.tan(np.radians(beta1) + layer1_dry.theta())
+                 ) * 1.9 * l1_circle_center],
+    x_fail2=[0, 1.5 * l2_circle_center],
+    y_fail2=[c2, c2 + (np.tan(np.radians(phi2)) * 1.5 * l2_circle_center)],
+    x_conj2=[0, 1.9 * l2_circle_center],
+    y_conj2=[0, (np.tan(np.radians(beta2) + layer2_dry.theta())
+                 ) * 1.9 * l2_circle_center],
+))
+
+mohr_circle_data = ColumnDataSource(data=dict(
+    y=[0],
+    center1=[l1_circle_center],
+    center2=[l2_circle_center],
+    # Circle radius from equation 11
+    radius1=[(c1 * (1 / np.tan(np.radians(phi1)))
+              + l1_circle_center) * np.sin(np.radians(phi1))],
+    radius2=[(c2 * (1 / np.tan(np.radians(phi2)))
+              + l2_circle_center) * np.sin(np.radians(phi2))],
+))
+
+mohr_plot.line(
+    x='x_fail1',
+    y='y_fail1',
+    source=mohr_line_data,
+    line_dash='dashed',
+    line_width=2,
+    legend='Layer 1 Effective stress M-C failure envelope')
+
+mohr_plot.line(
+    x='x_conj1',
+    y='y_conj1',
+    source=mohr_line_data,
+    line_dash='dashed',
+    line_width=2,
+    color='orange',
+    legend='Layer 1 Conjugate stress line')
+
+mohr_plot.line(
+    x='x_fail2',
+    y='y_fail2',
+    source=mohr_line_data,
+    line_width=2,
+    legend='Layer 2 Effective stress M-C failure envelope')
+
+mohr_plot.line(
+    x='x_conj2',
+    y='y_conj2',
+    source=mohr_line_data,
+    line_width=2,
+    color='orange',
+    legend='Layer 2 Conjugate stress line')
+
+mohr_plot.circle(
+    x='center1',
+    y='y',
+    radius='radius1',
+    fill_color=None,
+    line_dash='dashed',
+    line_width=2,
+    color='black',
+    source=mohr_circle_data)
+
+mohr_plot.circle(
+    x='center2',
+    y='y',
+    radius='radius2',
+    fill_color=None,
+    line_width=2,
+    color='black',
+    source=mohr_circle_data)
+
+mohr_plot.legend.location = "top_left"
+mohr_plot.legend.label_text_font_size = "9pt"
+mohr_plot.legend.spacing = 0
+mohr_plot.legend.padding = 5
+
+
+# Calculate intersection points for effective stress envelope
+x_line1_inter, y_line1_inter = line_circle_intersect(
+    h=mohr_circle_data.data['center1'][0],
+    k=0,
+    r=mohr_circle_data.data['radius1'][0],
+    angle=phi1,
+    c=c1)
+
+x_line2_inter, y_line2_inter = line_circle_intersect(
+    h=mohr_circle_data.data['center2'][0],
+    k=0,
+    r=mohr_circle_data.data['radius2'][0],
+    angle=phi2,
+    c=c2)
+
+# Calculate intersection points for conjugate stress line
+x_conj1_inter, y_conj1_inter = line_circle_intersect(
+    h=mohr_circle_data.data['center1'][0],
+    k=0,
+    r=mohr_circle_data.data['radius1'][0],
+    angle=beta1 + np.degrees(layer1_dry.theta()),
+    c=0)
+
+x_conj2_inter, y_conj2_inter = line_circle_intersect(
+    h=mohr_circle_data.data['center2'][0],
+    k=0,
+    r=mohr_circle_data.data['radius2'][0],
+    angle=beta2 + np.degrees(layer2_dry.theta()),
+    c=0)
+
+
+# Store in a ColumnDataSource
+intersect_data = ColumnDataSource(data=dict(
+                x_line1_inter = x_line1_inter,
+                y_line1_inter = y_line1_inter,
+                x_conj1_inter = x_conj1_inter,
+                y_conj1_inter = y_conj1_inter,
+                x_line2_inter = x_line2_inter,
+                y_line2_inter = y_line2_inter,
+                x_conj2_inter = x_conj2_inter,
+                y_conj2_inter = y_conj2_inter,
+                ))
+
+mohr_plot.circle(x='x_conj1_inter',
+                 y='y_conj1_inter',
+                 line_color='orange',
+                 line_width=2,
+                 #line_dash='dashed',
+                 fill_color='white',
+                 size=7,
+                 source=intersect_data)
+
+mohr_plot.circle(x='x_conj2_inter',
+                 y='y_conj2_inter',
+                 line_color='orange',
+                 line_width=2,
+                 fill_color='white',
+                 size=7,
+                 source=intersect_data)
+
 # mohr_bold_label_data = ColumnDataSource(data=dict(
 #                         x=[70,77.8,66,70,70],
 #                         y=[300-i*17 for i in range(5)],
@@ -513,6 +664,44 @@ columns = [
                     title="\u03C3'\u1D00\u1D07\u029C (kPa)",
                     formatter=models.NumberFormatter(format='0.000'))
 ]
+
+# This one is for abs(ewt)==H1
+source_table = ColumnDataSource(data=dict(
+        zw  = [0.0001,
+               layer1_dry.H * 0.9999,
+               layer1_dry.H + layer2_wet.H * 0.0001,
+               layer1_dry.H + layer2_wet.H],
+        zl  = [layer1_dry.zl(0.0001),
+               layer1_dry.zl(layer1_dry.H * 0.9999),
+               layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H * 0.0001),
+               layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H)],
+        z   = [layer1_dry.z(0.0001),
+               layer1_dry.z(layer1_dry.H * 0.9999),
+               layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H * 0.0001),
+               layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H)],
+        Ja  = [layer1_dry.Ja(0.0001),
+               layer1_dry.Ja(layer1_dry.H * 0.9999),
+               layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H * 0.0001),
+               layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H)],
+        a_a = [layer1_dry.alpha_a(0.0001, degrees=True),
+               layer1_dry.alpha_a(layer1_dry.H * 0.9999, degrees=True),
+               layer2_wet.alpha_a(layer2_wet.H * 0.0001, degrees=True),
+               layer2_wet.alpha_a(layer2_wet.H, degrees=True)],
+        Ka  = [layer1_dry.Ka(0.0001),
+               layer1_dry.Ka(layer1_dry.H * 0.9999),
+               layer2_wet.Ka(layer2_wet.H * 0.0001),
+               layer2_wet.Ka(layer2_wet.H)],
+        s_a = [layer1_dry.sigma_a(0.0001),
+               layer1_dry.sigma_a(layer1_dry.H * 0.9999),
+               layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H * 0.0001),
+               layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H)],
+        s_AEH=[layer1_dry.sigma_AEH(0.0001),
+               layer1_dry.sigma_AEH(layer1_dry.H * 0.9999),
+               layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H * 0.0001),
+               layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H)]
+))
+
+
 
 # total_H = layer_dry.H + layer_wet.H
 #
@@ -622,11 +811,11 @@ columns = [
 #             s_a = [layer_dry.sigma_a(i) for i in zwi],
 #             s_AEH=[layer_dry.sigma_AEH(i) for i in zwi]
 #     ))
-#
-# data_table = DataTable(source=source_table,
-#                        columns=columns,
-#                        width=1050,
-#                        height=200)
+
+data_table = DataTable(source=source_table,
+                       columns=columns,
+                       width=1000,
+                       height=175)
 
 
 ##############################################################################
@@ -636,7 +825,8 @@ columns = [
 # Callback function that updates all plots
 def update_plot(attr, old, new):
     omega = omega_slider.value
-    beta = beta_slider.value
+    beta1 = beta1_slider.value
+    beta2 = beta2_slider.value
     phi1 = phi1_slider.value
     if phi1 == 0:
         phi1 = 0.0000001
@@ -661,18 +851,18 @@ def update_plot(attr, old, new):
     # NEW Retaining Wall Coordinates
     xB = H / np.tan(angleA)
     yB = H
-    xC = xB + 3
+    xC = xB + 4
     yC = H
     xD = xC + H * np.tan(np.radians(omega))
 
     # NEW Backfill Coordinates
     # Layer 1
     xE = xC + 15
-    yE = yC + 15 * np.tan(np.radians(beta))
+    yE = yC + 15 * np.tan(np.radians(beta1))
     xM = xC + H1 * np.tan(np.radians(omega))
     yM = H2
     xN = xE
-    yN = yM
+    yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2))
 
     # Layer 2
     xF = xE
@@ -704,39 +894,198 @@ def update_plot(attr, old, new):
     wall_label_data.data=dict(
         x=[100, 100, 100, 100, 100],
         y=[110 - i * 15 for i in range(5)],
-        names=['H: {:.1f} m'.format(H1+H2),
+        names=['WT: {:.1f} m'.format(ewt),
+               'H: {:.1f} m'.format(H1+H2),
                '\u03B1h: {:.2f}g'.format(kh),
                '\u03B1v: {:.2f}g'.format(kv),
-               '\u03C9: {:.0f}\u1d52'.format(omega),
-               '\u03B2: {:.0f}\u1d52'.format(beta)])
+               '\u03C9: {:.0f}\u1d52'.format(omega)])
 
     soil_label_data.data=dict(
-        x=[10, 10, 10, 14, 14, 10, 10, 14, 14],
-        y=[H1+H2-1, H2+H1/2+0.5, H2+H1/2-0.5, H2+H1/2+0.5, H2+H1/2-0.5,
-           H2/2, H2/2-1, H2/2, H2/2-1],
-        names=['EWT: {:.1f} m'.format(ewt),
+        x=[10, 14, 10, 10, 14, 14, 10, 14, 10, 10, 14, 14],
+        y=[H2+H1/2+1, H2+H1/2+1, H2+H1/2, H2+H1/2-1, H2+H1/2, H2+H1/2-1,
+           H2/2+1, H2/2+1, H2/2, H2/2-1, H2/2, H2/2-1],
+        names=['LAYER 1',
+               '\u03B2: {:.0f}\u1d52'.format(beta1),
                'H: {:.1f} m'.format(H1),
                '\u03C6: {:.0f}\u1d52'.format(phi1),
                'c: {:.0f} kPa'.format(c1),
-               '\u03B3: {:.0f}\u1d52'.format(gamma1),
+               '\u03B3: {:.0f} kPa'.format(gamma1),
+               'LAYER 2',
+               '\u03B2: {:.0f}\u1d52'.format(beta2),
                'H: {:.1f} m'.format(H2),
                '\u03C6: {:.0f}\u1d52'.format(phi2),
                'c: {:.0f} kPa'.format(c2),
-               '\u03B3: {:.0f}\u1d52'.format(gamma2)])
+               '\u03B3: {:.0f} kPa'.format(gamma2)])
 
 
 
+    # STRESS CALCULATIONS
+    # New sep class calculations
+    if abs(ewt) >= H:
+        layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, H1)
+        layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2, H2)
+        layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, 0.00000001)
+        layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, 0.00000001)
+    elif H1 <= abs(ewt) < H:
+        layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, H1)
+        temp_var = abs(ewt)-H1
+        layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2,
+                         temp_var if temp_var !=0 else 0.00000001)
+        layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, 0.00000001)
+        layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, H+ewt)
+    else:
+        layer1_dry = sep(kh, kv, omega, beta1, phi1, gamma1, c1, abs(ewt))
+        layer2_dry = sep(kh, kv, omega, beta2, phi2, gamma2, c2, 0.00000001)
+        layer1_wet = sep(kh, kv, omega, beta1, phi1, gamma1-gamma_w, c1, H1+ewt)
+        layer2_wet = sep(kh, kv, omega, beta2, phi2, gamma2-gamma_w, c2, H2)
+
+    all_layer_Hl = (layer1_dry.Hl() + layer2_dry.Hl()
+                    + layer1_wet.Hl() + layer2_wet.Hl())
+
+    # New stress plot calculations
+    sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
+    sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
+    sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
+    sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
+                      + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+    sigma_l2_y_dry = np.arange(0.0001, layer2_dry.Hl(), 0.1)
+    sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
+                      + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+
+    sigma_l2_y_wet = np.arange(0.0001, layer2_wet.Hl(), 0.1)
+    sigma_l2_x_wet = (layer2_wet.sigma_AEH(sigma_l2_y_wet)
+                      + layer2_dry.sigma_AEH(layer2_dry.Hl())
+                      + layer1_dry.sigma_AEH(layer1_dry.Hl())
+                      + layer1_wet.sigma_AEH(layer1_wet.Hl()))
+
+    y_sigma_all = sigma_l1_y_dry.tolist()
+    x_sigma_all = sigma_l1_x_dry.tolist()
+    y_sigma_all.extend((sigma_l1_y_wet + layer1_dry.Hl()).tolist())
+    x_sigma_all.extend(sigma_l1_x_wet.tolist())
+    y_sigma_all.extend((sigma_l2_y_dry + layer1_dry.Hl()).tolist())
+    x_sigma_all.extend(sigma_l2_x_dry.tolist())
+    y_sigma_all.extend((sigma_l2_y_wet + layer1_dry.Hl() + layer1_wet.Hl()
+                        + layer2_dry.Hl()).tolist())
+    x_sigma_all.extend(sigma_l2_x_wet.tolist())
+    y_sigma_all.extend([all_layer_Hl])
+    x_sigma_all.extend([0])
+
+    sigma_data.data=dict(x=x_sigma_all, y=y_sigma_all)
+
+    # Update sigma plot ranges
+    sigma_figure.y_range.start = 0.99 * all_layer_Hl
+    sigma_figure.y_range.end = all_layer_Hl - 30
+
+    # Update arrow
+    load_height_top = all_layer_Hl - all_layer_Hl / 3
+    load_height_bot = all_layer_Hl / 3
+
+    arrow_data.data=dict(
+        x0 = [max(x_sigma_all)],
+        y0 = [load_height_top],
+        y1 = [load_height_top])
+
+    force = PolyArea(x_sigma_all, y_sigma_all) * (np.cos(np.radians(omega))**2)
+
+    arrow_load.x = 0.27 * max(x_sigma_all)
+    arrow_load.y = load_height_top
+    arrow_load.text = '{:.0f} kN'.format(force)
+    arrow_height.x = 0.27 * max(x_sigma_all)
+    arrow_height.y = load_height_top
+    arrow_height.text='@ ~{:.2f} m'.format(load_height_bot)
+
+    # Line div data
+    line_div_data.data=dict(
+        x1 = [0,layer1_dry.sigma_AEH(layer1_dry.Hl())+layer1_wet.sigma_AEH(layer1_wet.Hl())],
+        y1 = [layer1_dry.Hl()+layer1_wet.Hl(),layer1_dry.Hl()+layer1_wet.Hl()],
+        x2 = [0,layer1_dry.sigma_AEH(layer1_dry.Hl())+layer2_dry.sigma_AEH(layer2_dry.Hl())],
+        y2 = [layer1_dry.Hl()+layer2_dry.Hl(),layer1_dry.Hl()+layer2_dry.Hl()]
+    )
 
 
+    # MOHR CIRCLE
+    l1_circle_center = (layer1_dry.Ja(layer1_dry.H)
+                        + layer1_wet.Ja(layer1_wet.H))
+    l2_circle_center = (l1_circle_center
+                        + layer2_dry.Ja(layer2_dry.H)
+                        + layer2_wet.Ja(layer2_wet.H))
 
+    mohr_plot.x_range.end = 2.0 * max(l1_circle_center,l2_circle_center)
+    mohr_plot.y_range.end = 2.03 * max(l1_circle_center,l2_circle_center)
 
+    mohr_line_data.data=dict(
+        x_fail1=[0, 1.5 * l1_circle_center],
+        y_fail1=[c1, c1 + (np.tan(np.radians(phi1)) * 1.5 * l1_circle_center)],
+        x_conj1=[0, 1.9 * l1_circle_center],
+        y_conj1=[0, (np.tan(np.radians(beta1) + layer1_dry.theta())
+                     ) * 1.9 * l1_circle_center],
+        x_fail2=[0, 1.5 * l2_circle_center],
+        y_fail2=[c2, c2 + (np.tan(np.radians(phi2)) * 1.5 * l2_circle_center)],
+        x_conj2=[0, 1.9 * l2_circle_center],
+        y_conj2=[0, (np.tan(np.radians(beta2) + layer2_dry.theta())
+                     ) * 1.9 * l2_circle_center],
+    )
 
+    mohr_circle_data.data=dict(
+        y=[0],
+        center1=[l1_circle_center],
+        center2=[l2_circle_center],
+        # Circle radius from equation 11
+        radius1=[(c1 * (1 / np.tan(np.radians(phi1)))
+                  + l1_circle_center) * np.sin(np.radians(phi1))],
+        radius2=[(c2 * (1 / np.tan(np.radians(phi2)))
+                  + l2_circle_center) * np.sin(np.radians(phi2))],
+    )
 
+    # Update line/circle intersection
+    x_line1_inter, y_line1_inter = line_circle_intersect(
+        h=mohr_circle_data.data['center1'][0],
+        k=0,
+        r=mohr_circle_data.data['radius1'][0],
+        angle=phi1,
+        c=c1)
 
+    x_line2_inter, y_line2_inter = line_circle_intersect(
+        h=mohr_circle_data.data['center2'][0],
+        k=0,
+        r=mohr_circle_data.data['radius2'][0],
+        angle=phi2,
+        c=c2)
 
+    x_conj1_inter, y_conj1_inter = line_circle_intersect(
+        h=mohr_circle_data.data['center1'][0],
+        k=0,
+        r=mohr_circle_data.data['radius1'][0],
+        angle=beta1 + np.degrees(layer1_dry.theta()),
+        c=0)
 
+    x_conj2_inter, y_conj2_inter = line_circle_intersect(
+        h=mohr_circle_data.data['center2'][0],
+        k=0,
+        r=mohr_circle_data.data['radius2'][0],
+        angle=beta2 + np.degrees(layer2_dry.theta()),
+        c=0)
 
+    intersect_data.data=dict(
+                    x_line1_inter = x_line1_inter,
+                    y_line1_inter = y_line1_inter,
+                    x_conj1_inter = x_conj1_inter,
+                    y_conj1_inter = y_conj1_inter,
+                    x_line2_inter = x_line2_inter,
+                    y_line2_inter = y_line2_inter,
+                    x_conj2_inter = x_conj2_inter,
+                    y_conj2_inter = y_conj2_inter,
+                    )
 
+    # IF clause for NO INTERSECTION
+    if (np.isnan(intersect_data.data['x_conj1_inter'][0]) or
+            np.isnan(intersect_data.data['x_conj2_inter'][0])):
+        sigma_error.visible = True
+        mohr_plot.background_fill_color = 'red'
+
+    else:
+        sigma_error.visible = False
+        mohr_plot.background_fill_color = None
 
 
 
@@ -751,49 +1100,55 @@ H1_slider = Slider(
     end=24,
     step=0.5,
     value=6,
-    title='Layer 1 height, H1, (m)')
+    title='Layer 1 height, H\u2081, (m)')
 H2_slider = Slider(
     start=1,
     end=24,
     step=0.5,
     value=9,
-    title='Layer 1 height, H2, (m)')
+    title='Layer 2 height, H\u2082, (m)')
 omega_slider = Slider(
     start=0,
     end=30,
     step=1,
     value=15,
     title='Wall inclination, \u03C9, (deg.)')
-beta_slider = Slider(
+beta1_slider = Slider(
     start=-30,
     end=30,
     step=1,
-    value=10,
-    title='Surface slope, \u03B2, (deg.)')
+    value=beta1,
+    title='Surface slope, \u03B2\u2081, (deg.)')
+beta2_slider = Slider(
+    start=-30,
+    end=30,
+    step=1,
+    value=beta2,
+    title='Interface slope, \u03B2\u2082, (deg.)')
 phi1_slider = Slider(
     start=0,
     end=45,
     step=1,
     value=30,
-    title='Layer 1 internal friction, \u03C6, (deg.)')
+    title='Layer 1 internal friction, \u03C6\u2081, (deg.)')
 phi2_slider = Slider(
     start=0,
     end=45,
     step=1,
     value=40,
-    title='Layer 2 internal friction, \u03C6, (deg.)')
+    title='Layer 2 internal friction, \u03C6\u2082, (deg.)')
 gamma1_slider = Slider(
     start=16,
     end=25,
     step=1,
     value=23,
-    title='Layer 1 unit weight, \u03B3, (kN/m\u00B3)')
+    title='Layer 1 unit weight, \u03B3\u2081, (kN/m\u00B3)')
 gamma2_slider = Slider(
     start=16,
     end=25,
     step=1,
     value=20,
-    title='Layer 2 unit weight, \u03B3, (kN/m\u00B3)')
+    title='Layer 2 unit weight, \u03B3\u2082, (kN/m\u00B3)')
 kh_slider = Slider(
     start=0,
     end=0.4,
@@ -810,7 +1165,7 @@ ewt_slider = Slider(
     start=-H,
     end=0,
     step=0.1,
-    value=-H,
+    value=-6,
     orientation="vertical",
     direction='rtl',
     show_value=False,
@@ -826,7 +1181,8 @@ ewt_slider = Slider(
 H1_slider.on_change('value', update_plot)
 H2_slider.on_change('value', update_plot)
 omega_slider.on_change('value', update_plot)
-beta_slider.on_change('value', update_plot)
+beta1_slider.on_change('value', update_plot)
+beta2_slider.on_change('value', update_plot)
 phi1_slider.on_change('value', update_plot)
 phi2_slider.on_change('value', update_plot)
 gamma1_slider.on_change('value', update_plot)
@@ -837,11 +1193,11 @@ ewt_slider.on_change('value', update_plot)
 
 
 page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(),
-                  width=1050)
+                  width=1000)
 page_footer = Div(text=open(join(dirname(__file__), "page_footer.html")).read(),
-                  width=1050)
+                  width=1000)
 
-wall_controls = [omega_slider,beta_slider]
+wall_controls = [omega_slider,beta1_slider,beta2_slider]
 wall_inputs = widgetbox(*wall_controls, width=200)
 
 seismic_controls = [kh_slider,kv_slider]
@@ -860,25 +1216,23 @@ page_layout = layout([
                  Div(text="<h3>Seismic Coefficients:</h3>", width=180),
                  Div(text="<h3>Soil Properties:</h3>", width=200)],
                 [wall_inputs, seismic_inputs, layer1_inputs, layer2_inputs],
-                [Div(text="<hr>", width=1050)],
+                [Div(text="<hr>", width=1000)],
                 [Div(text="<h4></h4>", width=40),
                  Div(text="<h4>Retaining Wall and Backfill Properties</h4>",
-                     width=300),
-                 Div(text="<h4>EWT<br>&nbsp;(m)</h4>", width=95),
+                     width=325),
+                 Div(text="<h4>GWT<br>&nbsp;(m)</h4>", width=85),
                  Div(text="<h4>Horizontal Pseudo-Static<br>"
                           "Lateral Earth Pressure</h4>",
-                     width=225),
+                     width=215),
                  Div(text="<h4>Mohr's circle with failure envelopes at "
                           "depth, Zw,<br>from the top of wall surface</h4>",
                      width=350)],
-                [wall_plot, ewt_slider, Spacer(width=20),
-                 #sigma_figure, Spacer(width=20),
-                 #mohr_plot
-                 ],
+                [wall_plot, ewt_slider, Spacer(width=10),
+                 sigma_figure, Spacer(width=10),mohr_plot],
                 [Div(text="<h3>Calculated values at several vertical depths "
                           "from the top of wall surface, Zw</h3>",
                      width=600)],
-                #[data_table],
+                [data_table],
                 [page_footer]
 ])
 
