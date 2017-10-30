@@ -660,6 +660,23 @@ mohr_bold_labels2 = LabelSet(x='x',
 mohr_plot.add_layout(mohr_bold_labels2)
 
 
+beta_error = Label(
+    x=170,
+    y=100,
+    x_units='screen',
+    y_units='screen',
+    render_mode='css',
+    text="\u03B2 + \u03B8 > \u03D5",
+    text_font_style='bold',
+    text_align='center',
+    border_line_width=2,
+    text_font_size='14pt',
+    text_color='red',
+    background_fill_color='white')
+mohr_plot.add_layout(beta_error)
+beta_error.visible = False
+
+
 
 # mohr_sigma_label_data = ColumnDataSource(data=dict(
 #                         x=intersect_data.data['x_conj_inter'],
@@ -1160,10 +1177,12 @@ def update_plot(attr, old, new):
     if (np.isnan(intersect_data.data['x_conj1_inter'][0]) or
             np.isnan(intersect_data.data['x_conj2_inter'][0])):
         sigma_error.visible = True
+        beta_error.visible = True
         mohr_plot.background_fill_color = 'red'
 
     else:
         sigma_error.visible = False
+        beta_error.visible = False
         mohr_plot.background_fill_color = None
 
     # Update Mohr plot label data
