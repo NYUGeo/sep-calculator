@@ -751,6 +751,7 @@ if abs(ewt) < H1:
     Ja_ewt = layer1_dry.Ja(layer1_dry.H)
 else:
     Ja_ewt = layer1_dry.Ja(layer1_dry.H) + layer2_dry.Ja(layer2_dry.H)
+    Ja_ewt0 = layer2_dry.Ja(layer2_dry.H)
 Ja_l1_top = layer1_dry.Ja(zw_l1_top) + layer1_wet.Ja(zw_l1_top)
 Ja_l1_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)) * 0.9999
 Ja_l2_top = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
@@ -764,8 +765,7 @@ Ja_l2_bot0 = layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)
 if abs(ewt) < H1:
     Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H))
 else:
-    Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H)
-                         + gamma2 * layer2_dry.z(layer2_dry.H))
+    Ja_gz_ewt = Ja_ewt0 / (gamma2 * layer2_dry.z(layer2_dry.H))
 Ja_gz_l1_top = Ja_l1_top / (gamma1 * layer1_dry.z(zw_l1_top)
                             + (gamma1-gamma_w) * layer1_wet.z(zw_l1_top))
 Ja_gz_l1_bot = Ja_l1_bot / ((gamma1 * layer1_dry.z(layer1_dry.H)
@@ -795,10 +795,6 @@ Ka_l1_bot = layer1_dry.Ka(layer1_dry.H)
 Ka_l2_top = layer2_dry.Ka(layer2_dry.H)
 Ka_l2_bot = layer2_dry.Ka(layer2_dry.H)
 
-if abs(ewt) < H1:
-    s_a_ewt = layer1_dry.sigma_a(abs(ewt))
-else:
-    s_a_ewt = layer1_dry.sigma_a(layer1_dry.H) + layer2_dry.sigma_a(layer2_dry.H)
 s_a_l1_top = layer1_dry.sigma_a(zw_l1_top) + layer1_wet.sigma_a(zw_l1_top)
 s_a_l1_bot = (layer1_dry.sigma_a(layer1_dry.H) + layer1_wet.sigma_a(layer1_wet.H)) * 0.9999
 s_a_l2_top = (layer1_dry.sigma_a(layer1_dry.H,
@@ -808,11 +804,11 @@ s_a_l2_top = (layer1_dry.sigma_a(layer1_dry.H,
 s_a_l2_bot = (s_a_l2_top
               + layer2_dry.sigma_a(layer2_dry.H)
               + layer2_wet.sigma_a(layer2_wet.H))
-
 if abs(ewt) < H1:
-    s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+    s_a_ewt = layer1_dry.sigma_a(abs(ewt))
 else:
-    s_AEH_ewt = layer1_dry.sigma_AEH(layer1_dry.H) + layer2_dry.sigma_AEH(layer2_dry.H)
+    s_a_ewt = s_a_l2_top + layer2_dry.sigma_a(layer2_dry.H)
+
 s_AEH_l1_top = layer1_dry.sigma_AEH(zw_l1_top) + layer1_wet.sigma_AEH(zw_l1_top)
 s_AEH_l1_bot = (layer1_dry.sigma_AEH(layer1_dry.H) + layer1_wet.sigma_AEH(layer1_wet.H)) * 0.9999
 s_AEH_l2_top = (layer1_dry.sigma_AEH(layer1_dry.H,
@@ -824,6 +820,11 @@ s_AEH_l2_top = (layer1_dry.sigma_AEH(layer1_dry.H,
 s_AEH_l2_bot = (s_AEH_l2_top
               + layer2_dry.sigma_AEH(layer2_dry.H)
               + layer2_wet.sigma_AEH(layer2_wet.H))
+if abs(ewt) < H1:
+    s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+else:
+    s_AEH_ewt = s_AEH_l2_top + layer2_dry.sigma_AEH(layer2_dry.H)
+
 
 # This one is for ewt within first layer
 if 0 < abs(ewt) < H1:
@@ -880,154 +881,6 @@ else:
             s_a = [s_a_l1_top, s_a_l1_bot, s_a_l2_top, s_a_l2_bot],
             s_AEH=[s_AEH_l1_top, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_l2_bot]
     ))
-
-
-# This one is for abs(ewt)==H1
-# source_table = ColumnDataSource(data=dict(
-#         zw  = [0.0001,
-#                layer1_dry.H * 0.9999,
-#                layer1_dry.H + layer2_wet.H * 0.0001,
-#                layer1_dry.H + layer2_wet.H],
-#         zl  = [layer1_dry.zl(0.0001),
-#                layer1_dry.zl(layer1_dry.H * 0.9999),
-#                layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H * 0.0001),
-#                layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H)],
-#         z   = [layer1_dry.z(0.0001),
-#                layer1_dry.z(layer1_dry.H * 0.9999),
-#                layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H * 0.0001),
-#                layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H)],
-#         Ja  = [layer1_dry.Ja(0.0001),
-#                layer1_dry.Ja(layer1_dry.H * 0.9999),
-#                layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H * 0.0001),
-#                layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H)],
-#         a_a = [layer1_dry.alpha_a(0.0001, degrees=True),
-#                layer1_dry.alpha_a(layer1_dry.H * 0.9999, degrees=True),
-#                layer2_wet.alpha_a(layer2_wet.H * 0.0001, degrees=True),
-#                layer2_wet.alpha_a(layer2_wet.H, degrees=True)],
-#         Ka  = [layer1_dry.Ka(0.0001),
-#                layer1_dry.Ka(layer1_dry.H * 0.9999),
-#                layer2_wet.Ka(layer2_wet.H * 0.0001),
-#                layer2_wet.Ka(layer2_wet.H)],
-#         s_a = [layer1_dry.sigma_a(0.0001),
-#                layer1_dry.sigma_a(layer1_dry.H * 0.9999),
-#                layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H * 0.0001),
-#                layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H)],
-#         s_AEH=[layer1_dry.sigma_AEH(0.0001),
-#                layer1_dry.sigma_AEH(layer1_dry.H * 0.9999),
-#                layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H * 0.0001),
-#                layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H)]
-# ))
-
-
-
-# total_H = layer_dry.H + layer_wet.H
-#
-# if (H + ewt > 0) and (abs(ewt) > 0.1):
-#     zwi=[0.0001,
-#          layer_dry.H/2,
-#          layer_dry.H * 0.9999,
-#          layer_dry.H + layer_wet.H * 0.0001,
-#          layer_dry.H + layer_wet.H/2,
-#          total_H]
-#
-#     source_table = ColumnDataSource(data=dict(
-#             zw  = zwi,
-#             zl  = [layer_dry.zl(0.0001),
-#                    layer_dry.zl(layer_dry.H/2),
-#                    layer_dry.zl(layer_dry.H * 0.9999),
-#                    (layer_dry.zl(layer_dry.H)
-#                     + layer_wet.zl(layer_wet.H * 0.0001)),
-#                    (layer_dry.zl(layer_dry.H)
-#                     + layer_wet.zl(layer_wet.H/2)),
-#                    (layer_dry.zl(layer_dry.H)
-#                     + layer_wet.zl(layer_wet.H))],
-#             z   = [layer_dry.z(0.0001),
-#                    layer_dry.z(layer_dry.H/2),
-#                    layer_dry.z(layer_dry.H * 0.9999),
-#                    (layer_dry.z(layer_dry.H)
-#                     + layer_wet.z(layer_wet.H * 0.0001)),
-#                    (layer_dry.z(layer_dry.H)
-#                     + layer_wet.z(layer_wet.H/2)),
-#                    (layer_dry.z(layer_dry.H)
-#                     + layer_wet.z(layer_wet.H))],
-#             Ja  = [layer_dry.Ja(0.000001),
-#                    layer_dry.Ja(layer_dry.H/2),
-#                    layer_dry.Ja(layer_dry.H * 0.9999),
-#                    (layer_dry.Ja(layer_dry.H)
-#                     + layer_wet.Ja(layer_wet.H * 0.0001)),
-#                    (layer_dry.Ja(layer_dry.H)
-#                     + layer_wet.Ja(layer_wet.H/2)),
-#                    (layer_dry.Ja(layer_dry.H)
-#                     + layer_wet.Ja(layer_wet.H))],
-#             a_a = [layer_dry.alpha_a(0.0001, degrees=True),
-#                    layer_dry.alpha_a(layer_dry.H/2, degrees=True),
-#                    layer_dry.alpha_a(layer_dry.H * 0.9999, degrees=True),
-#                    layer_wet.alpha_a(layer_wet.H * 0.0001, degrees=True),
-#                    layer_wet.alpha_a(layer_wet.H/2, degrees=True),
-#                    layer_wet.alpha_a(layer_wet.H, degrees=True)],
-#             Ka  = [layer_dry.Ka(0.0001),
-#                    layer_dry.Ka(layer_dry.H/2),
-#                    layer_dry.Ka(layer_dry.H * 0.9999),
-#                    layer_wet.Ka(layer_wet.H * 0.0001),
-#                    layer_wet.Ka(layer_wet.H/2),
-#                    layer_wet.Ka(layer_wet.H)],
-#             s_a = [layer_dry.sigma_a(0.000001),
-#                    layer_dry.sigma_a(layer_dry.H/2),
-#                    layer_dry.sigma_a(layer_dry.H * 0.9999),
-#                    (layer_dry.sigma_a(layer_dry.H)
-#                     + layer_wet.sigma_a(layer_wet.H * 0.0001)),
-#                    (layer_dry.sigma_a(layer_dry.H)
-#                     + layer_wet.sigma_a(layer_wet.H/2)),
-#                    (layer_dry.sigma_a(layer_dry.H)
-#                     + layer_wet.sigma_a(layer_wet.H))],
-#             s_AEH=[layer_dry.sigma_AEH(0.000001),
-#                    layer_dry.sigma_AEH(layer_dry.H/2),
-#                    layer_dry.sigma_AEH(layer_dry.H * 0.9999),
-#                    (layer_dry.sigma_AEH(layer_dry.H)
-#                     + layer_wet.sigma_AEH(layer_wet.H * 0.0001)),
-#                    (layer_dry.sigma_AEH(layer_dry.H)
-#                     + layer_wet.sigma_AEH(layer_wet.H/2)),
-#                    (layer_dry.sigma_AEH(layer_dry.H)
-#                     + layer_wet.sigma_AEH(layer_wet.H))]
-#     ))
-#
-# elif abs(ewt) <= 0.1:
-#     zwi=[0.0001,
-#          total_H/5,
-#          2*(total_H/5),
-#          3*(total_H/5),
-#          4*(total_H/5),
-#          total_H]
-#
-#     source_table = ColumnDataSource(data=dict(
-#             zw  = zwi,
-#             zl  = [layer_wet.zl(i) for i in zwi],
-#             z   = [layer_wet.z(i) for i in zwi],
-#             Ja  = [layer_wet.Ja(i) for i in zwi],
-#             a_a = [layer_wet.alpha_a(i, degrees=True) for i in zwi],
-#             Ka  = [layer_wet.Ka(i) for i in zwi],
-#             s_a = [layer_wet.sigma_a(i) for i in zwi],
-#             s_AEH=[layer_wet.sigma_AEH(i) for i in zwi]
-#     ))
-#
-# else:
-#     zwi=[0.0001,
-#          total_H/5,
-#          2*(total_H/5),
-#          3*(total_H/5),
-#          4*(total_H/5),
-#          total_H]
-#
-#     source_table = ColumnDataSource(data=dict(
-#             zw  = zwi,
-#             zl  = [layer_dry.zl(i) for i in zwi],
-#             z   = [layer_dry.z(i) for i in zwi],
-#             Ja  = [layer_dry.Ja(i) for i in zwi],
-#             a_a = [layer_dry.alpha_a(i, degrees=True) for i in zwi],
-#             Ka  = [layer_dry.Ka(i) for i in zwi],
-#             s_a = [layer_dry.sigma_a(i) for i in zwi],
-#             s_AEH=[layer_dry.sigma_AEH(i) for i in zwi]
-#     ))
 
 data_table = DataTable(source=source_table,
                        columns=columns,
@@ -1373,6 +1226,7 @@ def update_plot(attr, old, new):
         Ja_ewt = layer1_dry.Ja(layer1_dry.H)
     else:
         Ja_ewt = layer1_dry.Ja(layer1_dry.H) + layer2_dry.Ja(layer2_dry.H)
+        Ja_ewt0 = layer2_dry.Ja(layer2_dry.H)
     Ja_l1_top = layer1_dry.Ja(zw_l1_top) + layer1_wet.Ja(zw_l1_top)
     Ja_l1_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)) * 0.9999
     Ja_l2_top = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
@@ -1385,8 +1239,7 @@ def update_plot(attr, old, new):
     if abs(ewt) < H1:
         Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H))
     else:
-        Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H)
-                             + gamma2 * layer2_dry.z(layer2_dry.H))
+        Ja_gz_ewt = Ja_ewt0 / (gamma2 * layer2_dry.z(layer2_dry.H))
     Ja_gz_l1_top = Ja_l1_top / (gamma1 * layer1_dry.z(zw_l1_top)
                                 + (gamma1-gamma_w) * layer1_wet.z(zw_l1_top))
     Ja_gz_l1_bot = Ja_l1_bot / ((gamma1 * layer1_dry.z(layer1_dry.H)
@@ -1416,10 +1269,6 @@ def update_plot(attr, old, new):
     Ka_l2_top = layer2_dry.Ka(layer2_dry.H)
     Ka_l2_bot = layer2_dry.Ka(layer2_dry.H)
 
-    if abs(ewt) < H1:
-        s_a_ewt = layer1_dry.sigma_a(abs(ewt))
-    else:
-        s_a_ewt = layer1_dry.sigma_a(layer1_dry.H) + layer2_dry.sigma_a(layer2_dry.H)
     s_a_l1_top = layer1_dry.sigma_a(zw_l1_top) + layer1_wet.sigma_a(zw_l1_top)
     s_a_l1_bot = (layer1_dry.sigma_a(layer1_dry.H) + layer1_wet.sigma_a(layer1_wet.H)) * 0.9999
     s_a_l2_top = (layer1_dry.sigma_a(layer1_dry.H,
@@ -1429,11 +1278,11 @@ def update_plot(attr, old, new):
     s_a_l2_bot = (s_a_l2_top
                   + layer2_dry.sigma_a(layer2_dry.H)
                   + layer2_wet.sigma_a(layer2_wet.H))
-
     if abs(ewt) < H1:
-        s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+        s_a_ewt = layer1_dry.sigma_a(abs(ewt))
     else:
-        s_AEH_ewt = layer1_dry.sigma_AEH(layer1_dry.H) + layer2_dry.sigma_AEH(layer2_dry.H)
+        s_a_ewt = s_a_l2_top + layer2_dry.sigma_a(layer2_dry.H)
+
     s_AEH_l1_top = layer1_dry.sigma_AEH(zw_l1_top) + layer1_wet.sigma_AEH(zw_l1_top)
     s_AEH_l1_bot = (layer1_dry.sigma_AEH(layer1_dry.H) + layer1_wet.sigma_AEH(layer1_wet.H)) * 0.9999
     s_AEH_l2_top = (layer1_dry.sigma_AEH(layer1_dry.H,
@@ -1445,6 +1294,11 @@ def update_plot(attr, old, new):
     s_AEH_l2_bot = (s_AEH_l2_top
                   + layer2_dry.sigma_AEH(layer2_dry.H)
                   + layer2_wet.sigma_AEH(layer2_wet.H))
+    if abs(ewt) < H1:
+        s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+    else:
+        s_AEH_ewt = s_AEH_l2_top + layer2_dry.sigma_AEH(layer2_dry.H)
+
 
     # This one is for ewt within first layer
     if 0 < abs(ewt) < H1:
@@ -1654,7 +1508,7 @@ curdoc().add_root(page_layout)
 curdoc().title = "SEP Calculator"
 
 ### test with:
-### bokeh serve --show sep-calculator.py
+### bokeh serve --show sep-calculator-l2.py
 
 ### run forever on server with:
 ### nohup bokeh serve sep-calculator-l2.py --allow-websocket-origin cue3.engineering.nyu.edu:5010 --host cue3.engineering.nyu.edu:5010 --port 5010
