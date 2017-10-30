@@ -107,17 +107,27 @@ class sep (object):
                ((2*(self.Ja(zw)/(self.gamma*self.z(zw)))*np.cos(self.beta-self.omega)**2) \
                / np.cos(self.alpha_a(zw))))
 
-    def sigma_a(self, zw):
+    def sigma_a(self, zw, user_Ka=999):
         """
         Equation 15: stress acting on the wall
-        """
-        return self.gamma * self.z(zw) * self.Ka(zw)
 
-    def sigma_AEH(self, zw):
+        Allow manual user input for Ka to facilitate multiple layers.
+        """
+        if user_Ka == 999:
+            return self.gamma * self.z(zw) * self.Ka(zw)
+        else:
+            return self.gamma * self.z(zw) * user_Ka
+
+    def sigma_AEH(self, zw, user_Ka=999, user_alpha_a=999):
         """
         Equation 19:
+
+        Allow manual user input for Ka and alpha_a to facilitate multiple layers.
         """
-        return self.sigma_a(zw) * np.cos(self.alpha_a(zw) + self.omega)
+        if user_Ka == 999:
+            return self.sigma_a(zw) * np.cos(self.alpha_a(zw) + self.omega)
+        else:
+            return self.sigma_a(zw,user_Ka) * np.cos(user_alpha_a + self.omega)
 
     def Hz(self):
         """
