@@ -19,7 +19,7 @@ kh = 0.15
 kv = 0
 omega = 15
 beta1 = 10
-beta2 = 0
+beta2 = 10
 
 H1 = 6
 phi1 = 30
@@ -32,7 +32,7 @@ gamma2 = 20
 c2 = 0
 
 H = H1 + H2
-ewt = -6
+ewt = -3
 gamma_w = 9.8
 
 
@@ -272,19 +272,42 @@ wall_plot.add_layout(soil_labels)
 ##############################################################################
 
 sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
-sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
 sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
+sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
 sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
                   + layer1_dry.sigma_AEH(layer1_dry.Hl()))
 sigma_l2_y_dry = np.arange(0.0001, layer2_dry.Hl(), 0.1)
-sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
-                  + layer1_dry.sigma_AEH(layer1_dry.Hl()))
-
 sigma_l2_y_wet = np.arange(0.0001, layer2_wet.Hl(), 0.1)
+sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
+                  + layer1_dry.sigma_AEH(
+                            layer1_dry.Hl(),
+                            user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                            user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
 sigma_l2_x_wet = (layer2_wet.sigma_AEH(sigma_l2_y_wet)
                   + layer2_dry.sigma_AEH(layer2_dry.Hl())
-                  + layer1_dry.sigma_AEH(layer1_dry.Hl())
-                  + layer1_wet.sigma_AEH(layer1_wet.Hl()))
+                  + layer1_dry.sigma_AEH(
+                            layer1_dry.Hl(),
+                            user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                            user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001))
+                  + layer1_wet.sigma_AEH(
+                            layer1_wet.Hl(),
+                            user_Ka=layer2_wet.Ka(layer2_wet.H * 0.0001),
+                            user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
+
+# sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
+# sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
+# sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
+# sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
+#                   + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+# sigma_l2_y_dry = np.arange(0.0001, layer2_dry.Hl(), 0.1)
+# sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
+#                   + layer1_dry.sigma_AEH(layer1_dry.Hl()))
+#
+# sigma_l2_y_wet = np.arange(0.0001, layer2_wet.Hl(), 0.1)
+# sigma_l2_x_wet = (layer2_wet.sigma_AEH(sigma_l2_y_wet)
+#                   + layer2_dry.sigma_AEH(layer2_dry.Hl())
+#                   + layer1_dry.sigma_AEH(layer1_dry.Hl())
+#                   + layer1_wet.sigma_AEH(layer1_wet.Hl()))
 
 y_sigma_all = sigma_l1_y_dry.tolist()
 x_sigma_all = sigma_l1_x_dry.tolist()
@@ -299,7 +322,6 @@ y_sigma_all.extend([all_layer_Hl])
 x_sigma_all.extend([0])
 
 sigma_data = ColumnDataSource(data=dict(x=x_sigma_all, y=y_sigma_all))
-
 
 load_height_top = all_layer_Hl - all_layer_Hl / 3
 load_height_bot = all_layer_Hl / 3
@@ -519,7 +541,7 @@ mohr_plot.circle(
 
 mohr_plot.legend.location = "top_left"
 mohr_plot.legend.label_text_font_size = "9pt"
-mohr_plot.legend.spacing = 0
+mohr_plot.legend.spacing = -5
 mohr_plot.legend.padding = 5
 
 
@@ -583,32 +605,62 @@ mohr_plot.circle(x='x_conj2_inter',
                  size=7,
                  source=intersect_data)
 
-# mohr_bold_label_data = ColumnDataSource(data=dict(
-#                         x=[70,77.8,66,70,70],
-#                         y=[300-i*17 for i in range(5)],
-#                         names=['Zw: {:.1f} m'.format(H),
-#                                '\u03D5: {:.0f}\u1d52'.format(phi),
-#                                '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta +
-#                                             np.degrees(layer_dry.theta())),
-#                                "\u03C3'\u03B2: {:.0f} kPa".format(
-#                                     intersect_data.data['x_conj_inter'][1]),
-#                                "\u03C3'\u03B8: {:.0f} kPa".format(
-#                                     intersect_data.data['x_conj_inter'][0]),
-#                                ]))
-#
-# mohr_bold_labels = LabelSet(x='x',
-#                        y='y',
-#                        x_units='screen',
-#                        y_units='screen',
-#                        text='names',
-#                        text_font_size='9pt',
-#                        text_color='black',
-#                        text_font_style='bold',
-#                        text_align='left',
-#                        background_fill_color='white',
-#                        source=mohr_bold_label_data)
-# mohr_plot.add_layout(mohr_bold_labels)
-#
+mohr_bold_label_data1 = ColumnDataSource(data=dict(
+                        x=[75,72,79.8,68,72,72],
+                        y=[285-i*15 for i in range(6)],
+                        names=['LAYER 1',
+                               'Zw: {:.1f} m'.format(H1),
+                               '\u03D5: {:.0f}\u1d52'.format(phi1),
+                               '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta1 +
+                                            np.degrees(layer1_dry.theta())),
+                               "\u03C3'\u03B2: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj1_inter'][1]),
+                               "\u03C3'\u03B8: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj1_inter'][0]),
+                               ]))
+
+mohr_bold_labels1 = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       source=mohr_bold_label_data1)
+mohr_plot.add_layout(mohr_bold_labels1)
+
+mohr_bold_label_data2 = ColumnDataSource(data=dict(
+                        x=[175,172,179.8,168,172,172],
+                        y=[285-i*15 for i in range(6)],
+                        names=['LAYER 2',
+                               'Zw: {:.1f} m'.format(H1+H2),
+                               '\u03D5: {:.0f}\u1d52'.format(phi2),
+                               '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta2 +
+                                            np.degrees(layer2_dry.theta())),
+                               "\u03C3'\u03B2: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj2_inter'][1]),
+                               "\u03C3'\u03B8: {:.0f} kPa".format(
+                                    intersect_data.data['x_conj2_inter'][0]),
+                               ]))
+
+mohr_bold_labels2 = LabelSet(x='x',
+                       y='y',
+                       x_units='screen',
+                       y_units='screen',
+                       text='names',
+                       text_font_size='9pt',
+                       text_color='black',
+                       text_font_style='bold',
+                       text_align='left',
+                       background_fill_color='white',
+                       source=mohr_bold_label_data2)
+mohr_plot.add_layout(mohr_bold_labels2)
+
+
+
 # mohr_sigma_label_data = ColumnDataSource(data=dict(
 #                         x=intersect_data.data['x_conj_inter'],
 #                         y=intersect_data.data['y_conj_inter'],
@@ -639,67 +691,232 @@ mohr_plot.circle(x='x_conj2_inter',
 ##############################################################################
 
 columns = [
+        TableColumn(field='loc',
+                    title='Location'),
         TableColumn(field='zw',
                     title='Zw (m)',
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='zl',
                     title='Zl (m)',
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='z',
                     title='Z (m)',
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='Ja',
                     title='J\u03B1',
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
+        TableColumn(field='Ja_gz',
+                    title='J\u03B1/\u03B3Z',
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='a_a',
                     title='\u03B1\u2090 (deg)',
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='Ka',
                     title='K\u03B1',
                     formatter=models.NumberFormatter(format='0.000')),
         TableColumn(field='s_a',
                     title="\u03C3'\u03B1 (kPa)",
-                    formatter=models.NumberFormatter(format='0.000')),
+                    formatter=models.NumberFormatter(format='0.00')),
         TableColumn(field='s_AEH',
                     title="\u03C3'\u1D00\u1D07\u029C (kPa)",
-                    formatter=models.NumberFormatter(format='0.000'))
+                    formatter=models.NumberFormatter(format='0.00'))
 ]
 
+# Calculate before storing in ColumnDataSource
+zw_ewt = abs(ewt)
+zw_l1_top = 0.0001
+zw_l1_bot = (layer1_dry.H + layer1_wet.H) * 0.9999
+zw_l2_top = (layer1_dry.H + layer1_wet.H) + (layer2_dry.H + layer2_wet.H) * 0.0001
+zw_l2_bot = (layer1_dry.H + layer1_wet.H) + (layer2_dry.H + layer2_wet.H)
+
+zl_ewt = abs(ewt)/np.cos(np.radians(omega))
+zl_l1_top = layer1_dry.zl(zw_l1_top) + layer1_wet.zl(zw_l1_top)
+zl_l1_bot = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)) * 0.9999
+zl_l2_top = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)
+            + (layer2_dry.zl(layer2_dry.H) + layer2_wet.zl(layer2_wet.H)) * 0.0001)
+zl_l2_bot = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)
+            + (layer2_dry.zl(layer2_dry.H) + layer2_wet.zl(layer2_wet.H)))
+
+z_ewt = (abs(ewt)
+         * (np.cos(np.radians(beta1-omega))
+           / (np.cos(np.radians(beta1))*np.cos(np.radians(omega)))))
+z_l1_top = layer1_dry.z(zw_l1_top) + layer1_wet.z(zw_l1_top)
+z_l1_bot = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)) * 0.9999
+z_l2_top = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)
+            + (layer2_dry.z(layer2_dry.H) + layer2_wet.z(layer2_wet.H)) * 0.0001)
+z_l2_bot = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)
+            + (layer2_dry.z(layer2_dry.H) + layer2_wet.z(layer2_wet.H)))
+
+if abs(ewt) < H1:
+    Ja_ewt = layer1_dry.Ja(layer1_dry.H)
+else:
+    Ja_ewt = layer1_dry.Ja(layer1_dry.H) + layer2_dry.Ja(layer2_dry.H)
+Ja_l1_top = layer1_dry.Ja(zw_l1_top) + layer1_wet.Ja(zw_l1_top)
+Ja_l1_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)) * 0.9999
+Ja_l2_top = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
+            + (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)) * 0.0001)
+Ja_l2_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
+            + (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)))
+Ja_l2_top0 = (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)) * 0.0001
+Ja_l2_bot0 = layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)
+
+
+if abs(ewt) < H1:
+    Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H))
+else:
+    Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H)
+                         + gamma2 * layer2_dry.z(layer2_dry.H))
+Ja_gz_l1_top = Ja_l1_top / (gamma1 * layer1_dry.z(zw_l1_top)
+                            + (gamma1-gamma_w) * layer1_wet.z(zw_l1_top))
+Ja_gz_l1_bot = Ja_l1_bot / ((gamma1 * layer1_dry.z(layer1_dry.H)
+                            + (gamma1-gamma_w) * layer1_wet.z(layer1_wet.H))
+                            * 0.9999)
+Ja_gz_l2_top = Ja_l2_top0 / ((gamma2 * layer2_dry.z(layer2_dry.H)
+                            + (gamma2-gamma_w) * layer2_wet.z(layer2_wet.H))
+                            * 0.0001)
+Ja_gz_l2_bot = Ja_l2_bot0 / (gamma2 * layer2_dry.z(layer2_dry.H)
+                            + (gamma2-gamma_w) * layer2_wet.z(layer2_wet.H))
+
+if abs(ewt) < H1:
+    a_a_ewt = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+else:
+    a_a_ewt = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+a_a_l1_top = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+a_a_l1_bot = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+a_a_l2_top = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+a_a_l2_bot = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+
+if abs(ewt) < H1:
+    Ka_ewt = layer1_dry.Ka(layer1_dry.H)
+else:
+    Ka_ewt = layer2_dry.Ka(layer2_dry.H)
+Ka_l1_top = layer1_dry.Ka(layer1_dry.H)
+Ka_l1_bot = layer1_dry.Ka(layer1_dry.H)
+Ka_l2_top = layer2_dry.Ka(layer2_dry.H)
+Ka_l2_bot = layer2_dry.Ka(layer2_dry.H)
+
+if abs(ewt) < H1:
+    s_a_ewt = layer1_dry.sigma_a(abs(ewt))
+else:
+    s_a_ewt = layer1_dry.sigma_a(layer1_dry.H) + layer2_dry.sigma_a(layer2_dry.H)
+s_a_l1_top = layer1_dry.sigma_a(zw_l1_top) + layer1_wet.sigma_a(zw_l1_top)
+s_a_l1_bot = (layer1_dry.sigma_a(layer1_dry.H) + layer1_wet.sigma_a(layer1_wet.H)) * 0.9999
+s_a_l2_top = (layer1_dry.sigma_a(layer1_dry.H,
+                                 user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001))
+              + layer1_wet.sigma_a(layer1_wet.H,
+                                   user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001)))
+s_a_l2_bot = (s_a_l2_top
+              + layer2_dry.sigma_a(layer2_dry.H)
+              + layer2_wet.sigma_a(layer2_wet.H))
+
+if abs(ewt) < H1:
+    s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+else:
+    s_AEH_ewt = layer1_dry.sigma_AEH(layer1_dry.H) + layer2_dry.sigma_AEH(layer2_dry.H)
+s_AEH_l1_top = layer1_dry.sigma_AEH(zw_l1_top) + layer1_wet.sigma_AEH(zw_l1_top)
+s_AEH_l1_bot = (layer1_dry.sigma_AEH(layer1_dry.H) + layer1_wet.sigma_AEH(layer1_wet.H)) * 0.9999
+s_AEH_l2_top = (layer1_dry.sigma_AEH(layer1_dry.H,
+                                 user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                                 user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001))
+              + layer1_wet.sigma_AEH(layer1_wet.H,
+                                   user_Ka=layer2_wet.Ka(layer2_wet.H * 0.0001),
+                                   user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
+s_AEH_l2_bot = (s_AEH_l2_top
+              + layer2_dry.sigma_AEH(layer2_dry.H)
+              + layer2_wet.sigma_AEH(layer2_wet.H))
+
+# This one is for ewt within first layer
+if 0 < abs(ewt) < H1:
+    source_table = ColumnDataSource(data=dict(
+            loc = ['Top of Layer 1',
+                   '@ GW Level',
+                   'Bottom Layer 1',
+                   'Top of Layer 2',
+                   'Bottom Layer 2'],
+            zw  = [zw_l1_top, zw_ewt, zw_l1_bot, zw_l2_top, zw_l2_bot],
+            zl  = [zl_l1_top, zl_ewt, zl_l1_bot, zl_l2_top, zl_l2_bot],
+            z   = [z_l1_top, z_ewt, z_l1_bot, z_l2_top, z_l2_bot],
+            Ja  = [Ja_l1_top, Ja_ewt, Ja_l1_bot, Ja_l2_top, Ja_l2_bot],
+            Ja_gz=[Ja_gz_l1_top, Ja_gz_ewt, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_l2_bot],
+            a_a = [a_a_l1_top, a_a_ewt, a_a_l1_bot, a_a_l2_top, a_a_l2_bot],
+            Ka  = [Ka_l1_top, Ka_ewt, Ka_l1_bot, Ka_l2_top, Ka_l2_bot],
+            s_a = [s_a_l1_top, s_a_ewt, s_a_l1_bot, s_a_l2_top, s_a_l2_bot],
+            s_AEH=[s_AEH_l1_top, s_AEH_ewt, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_l2_bot]
+    ))
+
+# This one for within second layer
+elif H1 < abs(ewt) < H:
+    source_table = ColumnDataSource(data=dict(
+            loc = ['Top of Layer 1',
+                   'Bottom Layer 1',
+                   'Top of Layer 2',
+                   '@ GW Level',
+                   'Bottom Layer 2'],
+            zw  = [zw_l1_top, zw_l1_bot, zw_l2_top, zw_ewt, zw_l2_bot],
+            zl  = [zl_l1_top, zl_l1_bot, zl_l2_top, zl_ewt, zl_l2_bot],
+            z   = [z_l1_top, z_l1_bot, z_l2_top, z_ewt, z_l2_bot],
+            Ja  = [Ja_l1_top, Ja_l1_bot, Ja_l2_top, Ja_ewt, Ja_l2_bot],
+            Ja_gz=[Ja_gz_l1_top, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_ewt, Ja_gz_l2_bot],
+            a_a = [a_a_l1_top, a_a_l1_bot, a_a_l2_top, a_a_ewt, a_a_l2_bot],
+            Ka  = [Ka_l1_top, Ka_l1_bot, Ka_l2_top, Ka_ewt, Ka_l2_bot],
+            s_a = [s_a_l1_top, s_a_l1_bot, s_a_l2_top, s_a_ewt, s_a_l2_bot],
+            s_AEH=[s_AEH_l1_top, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_ewt, s_AEH_l2_bot]
+    ))
+
+# This one for all other cases, not showing EWT details
+else:
+    source_table = ColumnDataSource(data=dict(
+            loc = ['Top of Layer 1',
+                   'Bottom Layer 1',
+                   'Top of Layer 2',
+                   'Bottom Layer 2'],
+            zw  = [zw_l1_top, zw_l1_bot, zw_l2_top, zw_l2_bot],
+            zl  = [zl_l1_top, zl_l1_bot, zl_l2_top, zl_l2_bot],
+            z   = [z_l1_top, z_l1_bot, z_l2_top, z_l2_bot],
+            Ja  = [Ja_l1_top, Ja_l1_bot, Ja_l2_top, Ja_l2_bot],
+            Ja_gz=[Ja_gz_l1_top, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_l2_bot],
+            a_a = [a_a_l1_top, a_a_l1_bot, a_a_l2_top, a_a_l2_bot],
+            Ka  = [Ka_l1_top, Ka_l1_bot, Ka_l2_top, Ka_l2_bot],
+            s_a = [s_a_l1_top, s_a_l1_bot, s_a_l2_top, s_a_l2_bot],
+            s_AEH=[s_AEH_l1_top, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_l2_bot]
+    ))
+
+
 # This one is for abs(ewt)==H1
-source_table = ColumnDataSource(data=dict(
-        zw  = [0.0001,
-               layer1_dry.H * 0.9999,
-               layer1_dry.H + layer2_wet.H * 0.0001,
-               layer1_dry.H + layer2_wet.H],
-        zl  = [layer1_dry.zl(0.0001),
-               layer1_dry.zl(layer1_dry.H * 0.9999),
-               layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H * 0.0001),
-               layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H)],
-        z   = [layer1_dry.z(0.0001),
-               layer1_dry.z(layer1_dry.H * 0.9999),
-               layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H * 0.0001),
-               layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H)],
-        Ja  = [layer1_dry.Ja(0.0001),
-               layer1_dry.Ja(layer1_dry.H * 0.9999),
-               layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H * 0.0001),
-               layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H)],
-        a_a = [layer1_dry.alpha_a(0.0001, degrees=True),
-               layer1_dry.alpha_a(layer1_dry.H * 0.9999, degrees=True),
-               layer2_wet.alpha_a(layer2_wet.H * 0.0001, degrees=True),
-               layer2_wet.alpha_a(layer2_wet.H, degrees=True)],
-        Ka  = [layer1_dry.Ka(0.0001),
-               layer1_dry.Ka(layer1_dry.H * 0.9999),
-               layer2_wet.Ka(layer2_wet.H * 0.0001),
-               layer2_wet.Ka(layer2_wet.H)],
-        s_a = [layer1_dry.sigma_a(0.0001),
-               layer1_dry.sigma_a(layer1_dry.H * 0.9999),
-               layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H * 0.0001),
-               layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H)],
-        s_AEH=[layer1_dry.sigma_AEH(0.0001),
-               layer1_dry.sigma_AEH(layer1_dry.H * 0.9999),
-               layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H * 0.0001),
-               layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H)]
-))
+# source_table = ColumnDataSource(data=dict(
+#         zw  = [0.0001,
+#                layer1_dry.H * 0.9999,
+#                layer1_dry.H + layer2_wet.H * 0.0001,
+#                layer1_dry.H + layer2_wet.H],
+#         zl  = [layer1_dry.zl(0.0001),
+#                layer1_dry.zl(layer1_dry.H * 0.9999),
+#                layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H * 0.0001),
+#                layer1_dry.zl(layer1_dry.H) + layer2_wet.zl(layer2_wet.H)],
+#         z   = [layer1_dry.z(0.0001),
+#                layer1_dry.z(layer1_dry.H * 0.9999),
+#                layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H * 0.0001),
+#                layer1_dry.z(layer1_dry.H) + layer2_wet.z(layer2_wet.H)],
+#         Ja  = [layer1_dry.Ja(0.0001),
+#                layer1_dry.Ja(layer1_dry.H * 0.9999),
+#                layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H * 0.0001),
+#                layer1_dry.Ja(layer1_dry.H) + layer2_wet.Ja(layer2_wet.H)],
+#         a_a = [layer1_dry.alpha_a(0.0001, degrees=True),
+#                layer1_dry.alpha_a(layer1_dry.H * 0.9999, degrees=True),
+#                layer2_wet.alpha_a(layer2_wet.H * 0.0001, degrees=True),
+#                layer2_wet.alpha_a(layer2_wet.H, degrees=True)],
+#         Ka  = [layer1_dry.Ka(0.0001),
+#                layer1_dry.Ka(layer1_dry.H * 0.9999),
+#                layer2_wet.Ka(layer2_wet.H * 0.0001),
+#                layer2_wet.Ka(layer2_wet.H)],
+#         s_a = [layer1_dry.sigma_a(0.0001),
+#                layer1_dry.sigma_a(layer1_dry.H * 0.9999),
+#                layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H * 0.0001),
+#                layer1_dry.sigma_a(layer1_dry.H) + layer2_wet.sigma_a(layer2_wet.H)],
+#         s_AEH=[layer1_dry.sigma_AEH(0.0001),
+#                layer1_dry.sigma_AEH(layer1_dry.H * 0.9999),
+#                layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H * 0.0001),
+#                layer1_dry.sigma_AEH(layer1_dry.H) + layer2_wet.sigma_AEH(layer2_wet.H)]
+# ))
 
 
 
@@ -944,19 +1161,28 @@ def update_plot(attr, old, new):
 
     # New stress plot calculations
     sigma_l1_y_dry = np.arange(0.0001, layer1_dry.Hl(), 0.1)
-    sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
     sigma_l1_y_wet = np.arange(0.0001, layer1_wet.Hl(), 0.1)
+    sigma_l1_x_dry = layer1_dry.sigma_AEH(sigma_l1_y_dry)
     sigma_l1_x_wet = (layer1_wet.sigma_AEH(sigma_l1_y_wet)
                       + layer1_dry.sigma_AEH(layer1_dry.Hl()))
     sigma_l2_y_dry = np.arange(0.0001, layer2_dry.Hl(), 0.1)
-    sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
-                      + layer1_dry.sigma_AEH(layer1_dry.Hl()))
-
     sigma_l2_y_wet = np.arange(0.0001, layer2_wet.Hl(), 0.1)
+    sigma_l2_x_dry = (layer2_dry.sigma_AEH(sigma_l2_y_dry)
+                      + layer1_dry.sigma_AEH(
+                                layer1_dry.Hl(),
+                                user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                                user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
     sigma_l2_x_wet = (layer2_wet.sigma_AEH(sigma_l2_y_wet)
                       + layer2_dry.sigma_AEH(layer2_dry.Hl())
-                      + layer1_dry.sigma_AEH(layer1_dry.Hl())
-                      + layer1_wet.sigma_AEH(layer1_wet.Hl()))
+                      + layer1_dry.sigma_AEH(
+                                layer1_dry.Hl(),
+                                user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                                user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001))
+                      + layer1_wet.sigma_AEH(
+                                layer1_wet.Hl(),
+                                user_Ka=layer2_wet.Ka(layer2_wet.H * 0.0001),
+                                user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
+
 
     y_sigma_all = sigma_l1_y_dry.tolist()
     x_sigma_all = sigma_l1_x_dry.tolist()
@@ -1087,7 +1313,194 @@ def update_plot(attr, old, new):
         sigma_error.visible = False
         mohr_plot.background_fill_color = None
 
+    # Update Mohr plot label data
 
+    mohr_bold_label_data1.data=dict(
+                            x=[75,72,79.8,68,72,72],
+                            y=[285-i*15 for i in range(6)],
+                            names=['LAYER 1',
+                                   'Zw: {:.1f} m'.format(H1),
+                                   '\u03D5: {:.0f}\u1d52'.format(phi1),
+                                   '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta1 +
+                                                np.degrees(layer1_dry.theta())),
+                                   "\u03C3'\u03B2: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj1_inter'][1]),
+                                   "\u03C3'\u03B8: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj1_inter'][0]),
+                                   ])
+
+    mohr_bold_label_data2.data=dict(
+                            x=[175,172,179.8,168,172,172],
+                            y=[285-i*15 for i in range(6)],
+                            names=['LAYER 2',
+                                   'Zw: {:.1f} m'.format(H1+H2),
+                                   '\u03D5: {:.0f}\u1d52'.format(phi2),
+                                   '\u03B2+\u03B8: {:.0f}\u1d52'.format(beta2 +
+                                                np.degrees(layer2_dry.theta())),
+                                   "\u03C3'\u03B2: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj2_inter'][1]),
+                                   "\u03C3'\u03B8: {:.0f} kPa".format(
+                                        intersect_data.data['x_conj2_inter'][0]),
+                                   ])
+
+    # UPDATE TABLE
+        # Calculate before storing in ColumnDataSource
+    zw_ewt = abs(ewt)
+    zw_l1_top = 0.0001
+    zw_l1_bot = (layer1_dry.H + layer1_wet.H) * 0.9999
+    zw_l2_top = (layer1_dry.H + layer1_wet.H) + (layer2_dry.H + layer2_wet.H) * 0.0001
+    zw_l2_bot = (layer1_dry.H + layer1_wet.H) + (layer2_dry.H + layer2_wet.H)
+
+    zl_ewt = abs(ewt)/np.cos(np.radians(omega))
+    zl_l1_top = layer1_dry.zl(zw_l1_top) + layer1_wet.zl(zw_l1_top)
+    zl_l1_bot = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)) * 0.9999
+    zl_l2_top = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)
+                + (layer2_dry.zl(layer2_dry.H) + layer2_wet.zl(layer2_wet.H)) * 0.0001)
+    zl_l2_bot = (layer1_dry.zl(layer1_dry.H) + layer1_wet.zl(layer1_wet.H)
+                + (layer2_dry.zl(layer2_dry.H) + layer2_wet.zl(layer2_wet.H)))
+
+    z_ewt = (abs(ewt)
+             * (np.cos(np.radians(beta1-omega))
+               / (np.cos(np.radians(beta1))*np.cos(np.radians(omega)))))
+    z_l1_top = layer1_dry.z(zw_l1_top) + layer1_wet.z(zw_l1_top)
+    z_l1_bot = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)) * 0.9999
+    z_l2_top = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)
+                + (layer2_dry.z(layer2_dry.H) + layer2_wet.z(layer2_wet.H)) * 0.0001)
+    z_l2_bot = (layer1_dry.z(layer1_dry.H) + layer1_wet.z(layer1_wet.H)
+                + (layer2_dry.z(layer2_dry.H) + layer2_wet.z(layer2_wet.H)))
+
+    if abs(ewt) < H1:
+        Ja_ewt = layer1_dry.Ja(layer1_dry.H)
+    else:
+        Ja_ewt = layer1_dry.Ja(layer1_dry.H) + layer2_dry.Ja(layer2_dry.H)
+    Ja_l1_top = layer1_dry.Ja(zw_l1_top) + layer1_wet.Ja(zw_l1_top)
+    Ja_l1_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)) * 0.9999
+    Ja_l2_top = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
+                + (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)) * 0.0001)
+    Ja_l2_bot = (layer1_dry.Ja(layer1_dry.H) + layer1_wet.Ja(layer1_wet.H)
+                + (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)))
+    Ja_l2_top0 = (layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)) * 0.0001
+    Ja_l2_bot0 = layer2_dry.Ja(layer2_dry.H) + layer2_wet.Ja(layer2_wet.H)
+
+    if abs(ewt) < H1:
+        Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H))
+    else:
+        Ja_gz_ewt = Ja_ewt / (gamma1 * layer1_dry.z(layer1_dry.H)
+                             + gamma2 * layer2_dry.z(layer2_dry.H))
+    Ja_gz_l1_top = Ja_l1_top / (gamma1 * layer1_dry.z(zw_l1_top)
+                                + (gamma1-gamma_w) * layer1_wet.z(zw_l1_top))
+    Ja_gz_l1_bot = Ja_l1_bot / ((gamma1 * layer1_dry.z(layer1_dry.H)
+                                + (gamma1-gamma_w) * layer1_wet.z(layer1_wet.H))
+                                * 0.9999)
+    Ja_gz_l2_top = Ja_l2_top0 / ((gamma2 * layer2_dry.z(layer2_dry.H)
+                                + (gamma2-gamma_w) * layer2_wet.z(layer2_wet.H))
+                                * 0.0001)
+    Ja_gz_l2_bot = Ja_l2_bot0 / (gamma2 * layer2_dry.z(layer2_dry.H)
+                                + (gamma2-gamma_w) * layer2_wet.z(layer2_wet.H))
+
+    if abs(ewt) < H1:
+        a_a_ewt = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+    else:
+        a_a_ewt = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+    a_a_l1_top = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+    a_a_l1_bot = layer1_dry.alpha_a(layer1_dry.H, degrees=True)
+    a_a_l2_top = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+    a_a_l2_bot = layer2_dry.alpha_a(layer2_dry.H, degrees=True)
+
+    if abs(ewt) < H1:
+        Ka_ewt = layer1_dry.Ka(layer1_dry.H)
+    else:
+        Ka_ewt = layer2_dry.Ka(layer2_dry.H)
+    Ka_l1_top = layer1_dry.Ka(layer1_dry.H)
+    Ka_l1_bot = layer1_dry.Ka(layer1_dry.H)
+    Ka_l2_top = layer2_dry.Ka(layer2_dry.H)
+    Ka_l2_bot = layer2_dry.Ka(layer2_dry.H)
+
+    if abs(ewt) < H1:
+        s_a_ewt = layer1_dry.sigma_a(abs(ewt))
+    else:
+        s_a_ewt = layer1_dry.sigma_a(layer1_dry.H) + layer2_dry.sigma_a(layer2_dry.H)
+    s_a_l1_top = layer1_dry.sigma_a(zw_l1_top) + layer1_wet.sigma_a(zw_l1_top)
+    s_a_l1_bot = (layer1_dry.sigma_a(layer1_dry.H) + layer1_wet.sigma_a(layer1_wet.H)) * 0.9999
+    s_a_l2_top = (layer1_dry.sigma_a(layer1_dry.H,
+                                     user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001))
+                  + layer1_wet.sigma_a(layer1_wet.H,
+                                       user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001)))
+    s_a_l2_bot = (s_a_l2_top
+                  + layer2_dry.sigma_a(layer2_dry.H)
+                  + layer2_wet.sigma_a(layer2_wet.H))
+
+    if abs(ewt) < H1:
+        s_AEH_ewt = layer1_dry.sigma_AEH(abs(ewt))
+    else:
+        s_AEH_ewt = layer1_dry.sigma_AEH(layer1_dry.H) + layer2_dry.sigma_AEH(layer2_dry.H)
+    s_AEH_l1_top = layer1_dry.sigma_AEH(zw_l1_top) + layer1_wet.sigma_AEH(zw_l1_top)
+    s_AEH_l1_bot = (layer1_dry.sigma_AEH(layer1_dry.H) + layer1_wet.sigma_AEH(layer1_wet.H)) * 0.9999
+    s_AEH_l2_top = (layer1_dry.sigma_AEH(layer1_dry.H,
+                                     user_Ka=layer2_dry.Ka(layer2_dry.H * 0.0001),
+                                     user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001))
+                  + layer1_wet.sigma_AEH(layer1_wet.H,
+                                       user_Ka=layer2_wet.Ka(layer2_wet.H * 0.0001),
+                                       user_alpha_a=layer2_dry.alpha_a(layer2_dry.H * 0.0001)))
+    s_AEH_l2_bot = (s_AEH_l2_top
+                  + layer2_dry.sigma_AEH(layer2_dry.H)
+                  + layer2_wet.sigma_AEH(layer2_wet.H))
+
+    # This one is for ewt within first layer
+    if 0 < abs(ewt) < H1:
+        source_table.data=dict(
+                loc = ['Top of Layer 1',
+                       '@ GW Level',
+                       'Bottom Layer 1',
+                       'Top of Layer 2',
+                       'Bottom Layer 2'],
+                zw  = [zw_l1_top, zw_ewt, zw_l1_bot, zw_l2_top, zw_l2_bot],
+                zl  = [zl_l1_top, zl_ewt, zl_l1_bot, zl_l2_top, zl_l2_bot],
+                z   = [z_l1_top, z_ewt, z_l1_bot, z_l2_top, z_l2_bot],
+                Ja  = [Ja_l1_top, Ja_ewt, Ja_l1_bot, Ja_l2_top, Ja_l2_bot],
+                Ja_gz=[Ja_gz_l1_top, Ja_gz_ewt, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_l2_bot],
+                a_a = [a_a_l1_top, a_a_ewt, a_a_l1_bot, a_a_l2_top, a_a_l2_bot],
+                Ka  = [Ka_l1_top, Ka_ewt, Ka_l1_bot, Ka_l2_top, Ka_l2_bot],
+                s_a = [s_a_l1_top, s_a_ewt, s_a_l1_bot, s_a_l2_top, s_a_l2_bot],
+                s_AEH=[s_AEH_l1_top, s_AEH_ewt, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_l2_bot]
+        )
+
+    # This one for within second layer
+    elif H1 < abs(ewt) < H:
+        source_table.data=dict(
+                loc = ['Top of Layer 1',
+                       'Bottom Layer 1',
+                       'Top of Layer 2',
+                       '@ GW Level',
+                       'Bottom Layer 2'],
+                zw  = [zw_l1_top, zw_l1_bot, zw_l2_top, zw_ewt, zw_l2_bot],
+                zl  = [zl_l1_top, zl_l1_bot, zl_l2_top, zl_ewt, zl_l2_bot],
+                z   = [z_l1_top, z_l1_bot, z_l2_top, z_ewt, z_l2_bot],
+                Ja  = [Ja_l1_top, Ja_l1_bot, Ja_l2_top, Ja_ewt, Ja_l2_bot],
+                Ja_gz=[Ja_gz_l1_top, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_ewt, Ja_gz_l2_bot],
+                a_a = [a_a_l1_top, a_a_l1_bot, a_a_l2_top, a_a_ewt, a_a_l2_bot],
+                Ka  = [Ka_l1_top, Ka_l1_bot, Ka_l2_top, Ka_ewt, Ka_l2_bot],
+                s_a = [s_a_l1_top, s_a_l1_bot, s_a_l2_top, s_a_ewt, s_a_l2_bot],
+                s_AEH=[s_AEH_l1_top, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_ewt, s_AEH_l2_bot]
+        )
+
+    # This one for all other cases, not showing EWT details
+    else:
+        source_table.data=dict(
+                loc = ['Top of Layer 1',
+                       'Bottom Layer 1',
+                       'Top of Layer 2',
+                       'Bottom Layer 2'],
+                zw  = [zw_l1_top, zw_l1_bot, zw_l2_top, zw_l2_bot],
+                zl  = [zl_l1_top, zl_l1_bot, zl_l2_top, zl_l2_bot],
+                z   = [z_l1_top, z_l1_bot, z_l2_top, z_l2_bot],
+                Ja  = [Ja_l1_top, Ja_l1_bot, Ja_l2_top, Ja_l2_bot],
+                Ja_gz=[Ja_gz_l1_top, Ja_gz_l1_bot, Ja_gz_l2_top, Ja_gz_l2_bot],
+                a_a = [a_a_l1_top, a_a_l1_bot, a_a_l2_top, a_a_l2_bot],
+                Ka  = [Ka_l1_top, Ka_l1_bot, Ka_l2_top, Ka_l2_bot],
+                s_a = [s_a_l1_top, s_a_l1_bot, s_a_l2_top, s_a_l2_bot],
+                s_AEH=[s_AEH_l1_top, s_AEH_l1_bot, s_AEH_l2_top, s_AEH_l2_bot]
+        )
 
 
 
@@ -1165,7 +1578,7 @@ ewt_slider = Slider(
     start=-H,
     end=0,
     step=0.1,
-    value=-6,
+    value=ewt,
     orientation="vertical",
     direction='rtl',
     show_value=False,
@@ -1244,4 +1657,4 @@ curdoc().title = "SEP Calculator"
 ### bokeh serve --show sep-calculator.py
 
 ### run forever on server with:
-### nohup bokeh serve sep-calculator.py --allow-websocket-origin cue3.engineering.nyu.edu:5006 --host cue3.engineering.nyu.edu:5006
+### nohup bokeh serve sep-calculator-l2.py --allow-websocket-origin cue3.engineering.nyu.edu:5010 --host cue3.engineering.nyu.edu:5010 --port 5010
