@@ -1498,13 +1498,13 @@ layer2_inputs = widgetbox(*layer2_controls, width=250)
 # The layout function replaces the row and column functions
 page_layout = layout([
                 [page_header],
-                [Div(text="<h3>Wall Properties:</h3>", width=200),
+                [Div(text="<h3>Wall Geometry:</h3>", width=200),
                  Div(text="<h3>Seismic Coefficients:</h3>", width=180),
                  Div(text="<h3>Soil Properties:</h3>", width=200)],
                 [wall_inputs, seismic_inputs, layer1_inputs, layer2_inputs],
                 [Div(text="<hr>", width=1000)],
                 [Div(text="<h4></h4>", width=40),
-                 Div(text="<h4>Retaining Wall and Backfill Properties</h4>",
+                 Div(text="<h4>Retaining Wall and Backfill Geometry</h4>",
                      width=325),
                  Div(text="<h4>GWT<br>&nbsp;(m)</h4>", width=85),
                  Div(text="<h4>Horizontal Pseudo-Static<br>"
