@@ -51,21 +51,21 @@ yB = H
 xC = xB + 4
 yC = H
 
-xD = xC + H * np.tan(np.radians(omega))
+xD = xC + H * np.tan(np.radians(omega)) * 1.2
 yD = 0
 
 
 # Backfill Coordinates
 # Layer 1
 xE = xC + 15
-yE = yC + 15 * np.tan(np.radians(beta1))
+yE = yC + 15 * np.tan(np.radians(beta1)) * 0.8
 
-xM = xC + H1 * np.tan(np.radians(omega))
+xM = xC + H1 * np.tan(np.radians(omega)) * 1.2
 yM = H2
 
 xN = xE
 #yN = yM
-yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2))
+yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
 
 # Layer 2
 xF = xE
@@ -73,7 +73,7 @@ yF = 0
 
 
 # EWT Coordinates
-xK = xC + abs(ewt) * np.tan(np.radians(omega))
+xK = xC + abs(ewt) * np.tan(np.radians(omega)) * 1.2
 yK = H + ewt    # Note: ewt is negative
 
 xL = xE
@@ -156,10 +156,11 @@ wall_plot = figure(
     y_axis_label='Height (m)',
     plot_width=375,
     plot_height=400,
-    y_range=(0, 30),
+    #y_range=(0, 30),
     toolbar_location=None,
     background_fill_alpha=0.1)
 wall_plot.xaxis.visible = False
+wall_plot.y_range.start = 0
 
 wall = Patch(
     x='x',
@@ -196,8 +197,8 @@ water = Patch(
 wall_plot.add_glyph(ewt_data, water)
 
 wall_label_data = ColumnDataSource(data=dict(
-    x=[100, 100, 100, 100, 100],
-    y=[110 - i * 15 for i in range(5)],
+    x=[105, 105, 105, 105, 105],
+    y=[150 - i * 15 for i in range(5)],
     names=['WT: {:.1f} m'.format(ewt),
            'H: {:.1f} m'.format(H1+H2),
            '\u03B1h: {:.2f}g'.format(kh),
@@ -329,7 +330,7 @@ load_height_bot = all_layer_Hl / 3
 
 sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
                       y_axis_label="Depth Along Wall Length 'Zl' (m)",
-                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 30),
+                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 19),
                       plot_width=200,
                       plot_height=400,
                       toolbar_location=None,
@@ -931,31 +932,31 @@ def update_plot(attr, old, new):
         ewt = 0.0000001
     H = H1 + H2
     ewt_slider.start = -H
-    if H >= 25:
-        H1_slider.end = H1
-        H2_slider.end = H2
+    # if H >= 25:
+    #     H1_slider.end = H1
+    #     H2_slider.end = H2
 
     # NEW Retaining Wall Coordinates
     xB = H / np.tan(angleA)
     yB = H
     xC = xB + 4
     yC = H
-    xD = xC + H * np.tan(np.radians(omega))
+    xD = xC + H * np.tan(np.radians(omega)) * 1.2
 
     # NEW Backfill Coordinates
     # Layer 1
     xE = xC + 15
-    yE = yC + 15 * np.tan(np.radians(beta1))
-    xM = xC + H1 * np.tan(np.radians(omega))
+    yE = yC + 15 * np.tan(np.radians(beta1)) * 0.8
+    xM = xC + H1 * np.tan(np.radians(omega)) * 1.2
     yM = H2
     xN = xE
-    yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2))
+    yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
 
     # Layer 2
     xF = xE
 
     # NEW EWT Coordinates
-    xK = xC + abs(ewt) * np.tan(np.radians(omega))
+    xK = xC + abs(ewt) * np.tan(np.radians(omega)) * 1.2
     yK = H + ewt    # Note: ewt is negative
     xL = xE
     yL = H + ewt    # Note: ewt is negative
@@ -979,8 +980,8 @@ def update_plot(attr, old, new):
     ewt_data.data = dict(x=x_ewt, y=y_ewt)
 
     wall_label_data.data=dict(
-        x=[100, 100, 100, 100, 100],
-        y=[110 - i * 15 for i in range(5)],
+        x=[105, 105, 105, 105, 105],
+        y=[150 - i * 15 for i in range(5)],
         names=['WT: {:.1f} m'.format(ewt),
                'H: {:.1f} m'.format(H1+H2),
                '\u03B1h: {:.2f}g'.format(kh),
@@ -1070,7 +1071,7 @@ def update_plot(attr, old, new):
 
     # Update sigma plot ranges
     sigma_figure.y_range.start = 0.99 * all_layer_Hl
-    sigma_figure.y_range.end = all_layer_Hl - 30
+    sigma_figure.y_range.end = - 4
 
     # Update arrow
     load_height_top = all_layer_Hl - all_layer_Hl / 3
