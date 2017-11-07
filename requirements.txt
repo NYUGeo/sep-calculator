@@ -1,2 +1,2 @@
-numpy
-bokeh
+numpy==1.13.3
+bokeh==0.12.10
