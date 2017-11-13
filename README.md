@@ -29,4 +29,78 @@ All programming was done in Python 3.6. You may run the program in any operating
 pip install -r requirements.txt
 ```
 
-There are two ways to perform calculations: A) manually in the command prompt (terminal) and/or B) interactively in the web application.
+There are two ways to perform calculations:
+- A) manually in the command prompt (terminal) and/or
+- B) interactively in the web application.
+
+
+### A) Run in Command Prompt (w/ example)
+
+Development of the core algorithms of the SEP calculator is closely following:
+
+>Iskander, M., Chen, Z., Omidvar, M., Guzman, I., and Elsherif, O. (2013). “Active static and seismic earth pressure for c–φ soils.” *Soils and Foundations*, 53(5), 639–652.
+
+The following example will replicate Figure 5 of the aforementioned journal article.
+
+Launch a Python shell from within the project folder. Import the core SEP class with:
+
+```python
+>>> from sep_core import sep
+```
+
+**Input parameters:** The current version is working with S.I. units only. The input parameters for the example shown in Figure 5 are:
+
+- kh = 0.2
+- kv = -0.1
+- &#969; = 20&#176;
+- &#946; = 15&#176;
+- &#966; = 30&#176;
+- &#947; = 23 kN/m&#179;
+- c = 20 kPa
+- H = 15 m
+
+Instantiate the Python SEP class with:
+
+```python
+>>> figure5 = sep(0.2, -0.1, 20, 15, 30, 23, 20, 15)
+```
+
+All necessary equations have been programmed as class methods and the values are returned in terms of depth from top of the wall, *Zw*. Therefore, at depth *Zw* = 9 meters, the following methods replicate the table in Figure 5:
+
+```python
+>>> figure5.zl(9)
+9.577599952283208
+
+>>> figure5.z(9)
+9.8777297730653579
+
+>>> figure5.Ja(9)
+157.46389426135741
+
+>>> figure5.alpha_a(9, degrees=True)
+32.234474051287712
+
+>>> figure5.Ka(9)
+0.79140861884533187
+
+>>> figure5.sigma_a(9)
+179.79837097166856
+
+>>> figure5.sigma_AEH(9)
+110.11418922580418
+```
+
+
+### B) Run interactively
+
+From within the `apps` folder, for one layer, launch the web application with:
+
+```
+bokeh serve --show sep-calculator-l1.py
+```
+
+And for two layers:
+
+```
+bokeh serve --show sep-calculator-l2.py
+```
