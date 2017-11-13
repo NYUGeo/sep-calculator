@@ -1,7 +1,9 @@
-from os.path import dirname, join
+from os.path import dirname, join, realpath
+import sys
+sys.path.append('../')
 
 import numpy as np
-from analysis import sep, line_circle_intersect
+from sep_core import sep, line_circle_intersect
 
 from bokeh.client import push_session
 from bokeh import models
@@ -980,9 +982,10 @@ kv_slider.on_change('value', update_plot)
 ewt_slider.on_change('value', update_plot)
 
 
-page_header = Div(text=open(join(dirname(__file__), "page_header.html")).read(),
+templates_dir = join(dirname(realpath(dirname(__file__))), 'templates')
+page_header = Div(text=open(join(templates_dir, "page_header.html")).read(),
                   width=1050)
-page_footer = Div(text=open(join(dirname(__file__), "page_footer.html")).read(),
+page_footer = Div(text=open(join(templates_dir, "page_footer.html")).read(),
                   width=1050)
 
 wall_controls = [H_value,omega_slider,beta_slider]
@@ -1030,4 +1033,4 @@ curdoc().title = "SEP Calculator"
 ### bokeh serve --show sep-calculator-l1.py
 
 ### run forever on server with:
-### nohup bokeh serve sep-calculator-l1.py --allow-websocket-origin cue3.engineering.nyu.edu:5010 --host cue3.engineering.nyu.edu:5010
+### nohup bokeh serve sep-calculator-l1.py --allow-websocket-origin cue3.engineering.nyu.edu:5010 --host cue3.engineering.nyu.edu:5010 --port 5010
