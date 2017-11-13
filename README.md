@@ -1,6 +1,6 @@
 # Seismic Earth Pressure Calculator
 
-#### Click [here](http://cue3.engineering.nyu.edu:5010) for the live web application, or read below to run locally.
+### Click [here](http://cue3.engineering.nyu.edu:5010) for the live web application, or read below to run locally.
 
 <br>
 
@@ -9,7 +9,7 @@ If you find our work useful, please cite us:
 > Machairas N, Iskander M, Omidvar M (2018) “Interactive Web Application for Computing Seismic Earth Pressure” *Proceedings GEESD V 2018*, ASCE (in review)
 
 
----
+<br>
 
 ## What is this the SEP Calculator
 
