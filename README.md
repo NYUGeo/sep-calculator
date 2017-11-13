@@ -4,6 +4,8 @@
 
 <br>
 
+![One layer](media/l1-screenshot.png)
+
 If you find our work useful, please cite us:
 
 > Machairas N, Iskander M, Omidvar M (2018) “Interactive Web Application for Computing Seismic Earth Pressure” *Proceedings GEESD V 2018*, ASCE (in review)
