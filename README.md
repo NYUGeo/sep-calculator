@@ -27,5 +27,4 @@ All programming was done in Python 3.6. You may run the program in any operating
 pip install -r requirements.txt
 ```
 
-
 There are two ways to perform calculations: A) manually in the command prompt (terminal) and/or B) interactively in the web application.
