@@ -4,7 +4,7 @@
 
 <br>
 
-![One layer](media/l1-screenshot.png)
+[![One layer](media/l1-screenshot.png)](http://cue3.engineering.nyu.edu:5010)
 
 If you find our work useful, please cite us:
 
