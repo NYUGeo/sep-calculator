@@ -1027,7 +1027,7 @@ curdoc().add_root(page_layout)
 curdoc().title = "SEP Calculator"
 
 ### test with:
-### bokeh serve --show sep-calculator.py
+### bokeh serve --show sep-calculator-l1.py
 
 ### run forever on server with:
-### nohup bokeh serve sep-calculator.py --allow-websocket-origin cue3.engineering.nyu.edu:5006 --host cue3.engineering.nyu.edu:5006
+### nohup bokeh serve sep-calculator-l1.py --allow-websocket-origin cue3.engineering.nyu.edu:5010 --host cue3.engineering.nyu.edu:5010
