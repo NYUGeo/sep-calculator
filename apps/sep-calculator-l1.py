@@ -40,7 +40,7 @@ angleA = np.radians(88)
 xB = H / np.tan(angleA)
 yB = H
 
-xC = xB + 3
+xC = xB + H/5
 yC = H
 
 xD = xC + H * np.tan(np.radians(omega))
@@ -48,8 +48,8 @@ yD = 0
 
 
 # Backfill Coordinates
-xE = xC + 15
-yE = yC + 15 * np.tan(np.radians(beta))
+xE = xC + H
+yE = yC + H * np.tan(np.radians(beta))
 
 xF = xE
 yF = 0
@@ -117,7 +117,8 @@ plot = figure(#title="Retaining Wall and Backfill Properties",
               y_axis_label='Height (m)',
               plot_width=350,
               plot_height=400,
-              y_range=(0,30),
+              y_range=(0,1.3*H),
+              x_range=(0,0.829*1.3*H),
               toolbar_location=None,
               background_fill_alpha=0.1)
 plot.xaxis.visible = False
@@ -146,8 +147,8 @@ water = Patch(x='x',
 plot.add_glyph(source_ewt, water)
 
 wall_label_data = ColumnDataSource(data=dict(
-                        x=[100,100,100,100],
-                        y=[100-i*15 for i in range(4)],
+                        x=[85,85,85,85],
+                        y=[150-i*15 for i in range(4)],
                         names=['\u03B1h: {:.1f}g'.format(kh),
                                '\u03B1v: {:.1f}g'.format(kv),
                                '\u03C9: {:.0f}\u1d52'.format(omega),
@@ -168,7 +169,7 @@ plot.add_layout(wall_labels)
 
 soil_label_data = ColumnDataSource(data=dict(
                         x=[227,210,227,227,227],
-                        y=[180-i*15 for i in range(5)],
+                        y=[200-i*15 for i in range(5)],
                         names=['H: {:.1f} m'.format(H),
                                'EWT: {:.1f} m'.format(ewt),
                                '\u03C6: {:.0f}\u1d52'.format(phi),
@@ -227,7 +228,7 @@ load_height_bot = (all_layer_Hl - layer_dry.Hzc()) / 3
 
 sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
                       y_axis_label="Depth Along Wall Length 'Zl' (m)",
-                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 30),
+                      y_range=(0.99 * all_layer_Hl, - 0.3 * H),
                       plot_width=200,
                       plot_height=400,
                       toolbar_location=None,
@@ -585,6 +586,8 @@ data_table = DataTable(source=source_table,
 # Callback function that updates all plots
 def update_plot(attr, old, new):
     omega = omega_slider.value
+    if omega == 0:
+        omega = 0.1
     beta = beta_slider.value
     phi = phi_slider.value
     if phi == 0:
@@ -609,15 +612,15 @@ def update_plot(attr, old, new):
     new_xB = H / np.tan(new_angleA)
     new_yB = H
 
-    new_xC = new_xB + 3
+    new_xC = new_xB + H/5
     new_yC = H
 
     new_xD = new_xC + H * np.tan(np.radians(omega))
     new_yD = 0
 
     ### New Backfill Coordinates
-    new_xE = new_xC + 15
-    new_yE = new_yC + 15 * np.tan(np.radians(beta))
+    new_xE = new_xC + H
+    new_yE = new_yC + H * np.tan(np.radians(beta))
 
     new_xF = new_xE
     new_yF = 0
@@ -662,12 +665,14 @@ def update_plot(attr, old, new):
     new_force = (PolyArea(new_x_sigma_all,new_y_sigma_all)
                  * np.cos(np.radians(omega)))
 
+    plot.y_range.end = 1.30 * H
+    plot.x_range.end = 0.829 * 1.30 * H
     sigma_figure.y_range.start = 0.99 * new_all_layer_Hl
-    sigma_figure.y_range.end = new_all_layer_Hl - 30
+    sigma_figure.y_range.end = - 0.3 * H
 
     wall_label_data.data=dict(
-                    x=[100,100,100,100],
-                    y=[100-i*15 for i in range(4)],
+                    x=[85,85,85,85],
+                    y=[150-i*15 for i in range(4)],
                     names=['\u03B1h: {:.1f}g'.format(kh),
                            '\u03B1v: {:.1f}g'.format(kv),
                            '\u03C9: {:.0f}\u1d52'.format(omega),
@@ -675,7 +680,7 @@ def update_plot(attr, old, new):
 
     soil_label_data.data=dict(
                     x=[227,210,227,227,227],
-                    y=[120*(H/10)-i*15 for i in range(5)],
+                    y=[200-i*15 for i in range(5)],
                     names=['H: {:.1f} m'.format(H),
                            'EWT: {:.1f} m'.format(ewt),
                            '\u03C6: {:.0f}\u1d52'.format(phi),
@@ -908,7 +913,7 @@ def update_plot(attr, old, new):
 
 # Sliders
 H_value = Slider(
-                start=10,
+                start=1,
                 end=25,
                 step=0.5,
                 value=15,
@@ -927,7 +932,7 @@ beta_slider = Slider(
                 title='Surface slope, \u03B2, (deg.)')
 phi_slider = Slider(
                 start=0,
-                end=45,
+                end=70,
                 step=1,
                 value=30,
                 title='Ιnternal friction, \u03C6, (deg.)')

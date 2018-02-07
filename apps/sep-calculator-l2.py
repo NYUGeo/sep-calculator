@@ -50,7 +50,8 @@ angleA = np.radians(88)
 xB = H / np.tan(angleA)
 yB = H
 
-xC = xB + 4
+# xC = xB + 4
+xC = xB + H/5
 yC = H
 
 xD = xC + H * np.tan(np.radians(omega)) * 1.2
@@ -59,15 +60,16 @@ yD = 0
 
 # Backfill Coordinates
 # Layer 1
-xE = xC + 15
-yE = yC + 15 * np.tan(np.radians(beta1)) * 0.8
+# xE = xC + 15
+xE = xC + H
+# yE = yC + 15 * np.tan(np.radians(beta1)) * 0.8
+yE = yC + H * np.tan(np.radians(beta1)) * 0.8
 
 xM = xC + H1 * np.tan(np.radians(omega)) * 1.2
 yM = H2
 
 xN = xE
-#yN = yM
-yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
+yN = yM + (H - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
 
 # Layer 2
 xF = xE
@@ -158,7 +160,8 @@ wall_plot = figure(
     y_axis_label='Height (m)',
     plot_width=375,
     plot_height=400,
-    #y_range=(0, 30),
+    y_range=(0, 1.3*H),
+    x_range=(0,0.829*1.3*H),
     toolbar_location=None,
     background_fill_alpha=0.1)
 wall_plot.xaxis.visible = False
@@ -221,9 +224,8 @@ wall_labels = LabelSet(
 wall_plot.add_layout(wall_labels)
 
 soil_label_data = ColumnDataSource(data=dict(
-    x=[10, 14, 10, 10, 14, 14, 10, 14, 10, 10, 14, 14],
-    y=[H2+H1/2+1, H2+H1/2+1, H2+H1/2, H2+H1/2-1, H2+H1/2, H2+H1/2-1,
-       H2/2+1, H2/2+1, H2/2, H2/2-1, H2/2, H2/2-1],
+    x=[220, 280, 220, 280, 220, 280, 220, 280, 220, 280, 220, 280],
+    y=[280, 280, 265, 265, 250, 250, 130, 130, 115, 115, 100, 100],
     names=['LAYER 1',
            '\u03B2: {:.0f}\u1d52'.format(beta1),
            'H: {:.1f} m'.format(H1),
@@ -240,8 +242,8 @@ soil_label_data = ColumnDataSource(data=dict(
 soil_labels = LabelSet(
     x='x',
     y='y',
-    #x_units='screen',
-    #y_units='screen',
+    x_units='screen',
+    y_units='screen',
     text='names',
     text_font_size='9pt',
     text_color='black',
@@ -332,7 +334,7 @@ load_height_bot = all_layer_Hl / 3
 
 sigma_figure = figure(x_axis_label="\u03C3'\u1D00\u1D07\u029C (kPa)",  # sigma_AEH
                       y_axis_label="Depth Along Wall Length 'Zl' (m)",
-                      y_range=(0.99 * all_layer_Hl, all_layer_Hl - 19),
+                      y_range=(0.99 * all_layer_Hl, - 0.3 * H),
                       plot_width=200,
                       plot_height=400,
                       toolbar_location=None,
@@ -941,18 +943,18 @@ def update_plot(attr, old, new):
     # NEW Retaining Wall Coordinates
     xB = H / np.tan(angleA)
     yB = H
-    xC = xB + 4
+    xC = xB + H/5
     yC = H
     xD = xC + H * np.tan(np.radians(omega)) * 1.2
 
     # NEW Backfill Coordinates
     # Layer 1
-    xE = xC + 15
-    yE = yC + 15 * np.tan(np.radians(beta1)) * 0.8
+    xE = xC + H
+    yE = yC + H * np.tan(np.radians(beta1)) * 0.8
     xM = xC + H1 * np.tan(np.radians(omega)) * 1.2
     yM = H2
     xN = xE
-    yN = yM + (15 - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
+    yN = yM + (H - H1 * np.tan(np.radians(omega))) * np.tan(np.radians(beta2)) * 0.8
 
     # Layer 2
     xF = xE
@@ -991,9 +993,8 @@ def update_plot(attr, old, new):
                '\u03C9: {:.0f}\u1d52'.format(omega)])
 
     soil_label_data.data=dict(
-        x=[10, 14, 10, 10, 14, 14, 10, 14, 10, 10, 14, 14],
-        y=[H2+H1/2+1, H2+H1/2+1, H2+H1/2, H2+H1/2-1, H2+H1/2, H2+H1/2-1,
-           H2/2+1, H2/2+1, H2/2, H2/2-1, H2/2, H2/2-1],
+        x=[220, 280, 220, 280, 220, 280, 220, 280, 220, 280, 220, 280],
+        y=[280, 280, 265, 265, 250, 250, 130, 130, 115, 115, 100, 100],
         names=['LAYER 1',
                '\u03B2: {:.0f}\u1d52'.format(beta1),
                'H: {:.1f} m'.format(H1),
@@ -1007,7 +1008,9 @@ def update_plot(attr, old, new):
                'c: {:.0f} kPa'.format(c2),
                '\u03B3: {:.0f} kPa'.format(gamma2)])
 
-
+    # Update wall plot ranges
+    wall_plot.y_range.end = 1.3*H
+    wall_plot.x_range.end = 0.829*1.3*H
 
     # STRESS CALCULATIONS
     # New sep class calculations
@@ -1073,7 +1076,7 @@ def update_plot(attr, old, new):
 
     # Update sigma plot ranges
     sigma_figure.y_range.start = 0.99 * all_layer_Hl
-    sigma_figure.y_range.end = - 4
+    sigma_figure.y_range.end = - 0.3 * H
 
     # Update arrow
     load_height_top = all_layer_Hl - all_layer_Hl / 3
@@ -1416,13 +1419,13 @@ beta2_slider = Slider(
     title='Interface slope, \u03B2\u2082, (deg.)')
 phi1_slider = Slider(
     start=0,
-    end=45,
+    end=70,
     step=1,
     value=30,
     title='Layer 1 internal friction, \u03C6\u2081, (deg.)')
 phi2_slider = Slider(
     start=0,
-    end=45,
+    end=70,
     step=1,
     value=40,
     title='Layer 2 internal friction, \u03C6\u2082, (deg.)')
